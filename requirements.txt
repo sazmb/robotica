@@ -1,0 +1,16 @@
+# Micromouse Maze Solver — Python Dependencies
+# ================================================
+# Core runtime: no external dependencies required
+# (only Python 3.11+ standard library for simulation)
+
+# Optional: Evaluation and visualisation
+matplotlib>=3.7.0
+numpy>=1.24.0
+
+# Optional: Enhanced progress bars and logging
+tqdm>=4.65.0
+
+# Optional: Development tools
+pytest>=7.4.0
+pytest-cov>=4.1.0
+mypy>=1.5.0
