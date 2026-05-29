@@ -135,7 +135,7 @@ pip install -r requirements.txt
 2. Click the **"+"** button to add a new algorithm
 3. Fill in the configuration:
    - **Name**: `FloodFill` (or `IncrementalAStar`)
-   - **Directory**: the full path to `robotica_proposta_1/`
+   - **Directory**: the full path to `robotica`
    - **Build command**: *(leave empty for Python)*
    - **Run command**: `python main.py --algorithm flood_fill`
 
