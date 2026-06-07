@@ -1,0 +1,12 @@
+# TODO
+# Tasks:
+# LOGICA DI FUNZIONAMENTO: ==========================================================
+
+# 2 : A* produce degli invalid input ma non so il perchè
+# 3: capire perchè anche A* per trovare lo shortest path utilizza floodfill, anche se penso perchè l'algoritmo per trovare il 
+# percorso più breve sia lo stesso una volta che si è costruita la mappa, ma non sono sicuro
+
+# RISULTATI e VALUTAZIONE: =========================================================
+
+# 1: creare un benchmark di labirinti challenging per il nostro mm che sottolinenino le differenze tra ffill e a*
+# 2: rendere anche visivamente piu chiaro cosa avviene quando mm torna inidetro e calcola percorso piu breve, come visto su youtube
