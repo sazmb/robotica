@@ -1,12 +1,21 @@
 # TODO
 # Tasks:
 # LOGICA DI FUNZIONAMENTO: ==========================================================
+#
+# 3: capire perchè anche A* nella fase 3 per trovare lo shortest path utilizza il metodo della classe floodfill, 
+#     anche se penso perchè l'algoritmo per trovare il percorso più breve sia lo stesso una volta che si è costruita la mappa, 
+#     ma non sono sicuro
+# 4: capire se i colori usati per disegnare la mappa hanno un significato e sono coerenti tra i due algoritmi
 
-# 2 : A* produce degli invalid input ma non so il perchè
-# 3: capire perchè anche A* per trovare lo shortest path utilizza floodfill, anche se penso perchè l'algoritmo per trovare il 
-# percorso più breve sia lo stesso una volta che si è costruita la mappa, ma non sono sicuro
 
 # RISULTATI e VALUTAZIONE: =========================================================
+# 1: creare un benchmark di labirinti challenging per il nostro mm per marcare le differenze tra ffill e a*
+# 3: grafico del balnce tra esplorazione e finale path length da rivedere: la retta tracciata è effettivamente il valore migliore desiderato
 
-# 1: creare un benchmark di labirinti challenging per il nostro mm che sottolinenino le differenze tra ffill e a*
-# 2: rendere anche visivamente piu chiaro cosa avviene quando mm torna inidetro e calcola percorso piu breve, come visto su youtube
+
+# COSE IN PIU': ========================================================================
+# 1: nella fase 3 sarebbe figo mettere gli spostamenti di 45 gradi come nei maze veri, inoltre capire la se ha senso implementare 
+#    simulazioni più complesse con anche simulazione di velocità, come visto nei video di micromouse 
+# 2: render il sitema capace di risolvere i maze anche 32x32
+# 3: strategia migliore per la fase 2: ovvero applicando lo stesso algoritmo di ricerca per tornare indietro, si potrebbe
+#     forzare l'algoritmo a cercare nuove celle o a prendere la strada più lunga 
