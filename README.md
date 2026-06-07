@@ -15,11 +15,12 @@
 3. [Installation](#-installation)
 4. [Simulator Setup](#-simulator-setup)
 5. [Running the Algorithms](#-running-the-algorithms)
-6. [Running Benchmarks](#-running-benchmarks)
-7. [Metrics Explained](#-metrics-explained)
-8. [Experimental Analysis](#-experimental-analysis)
-9. [Project Structure](#-project-structure)
-10. [Future Improvements](#-future-improvements)
+6. [Batch / Auto-run Mode](#-batch--auto-run-mode)
+7. [Running Benchmarks](#-running-benchmarks)
+8. [Metrics Explained](#-metrics-explained)
+9. [Experimental Analysis](#-experimental-analysis)
+10. [Project Structure](#-project-structure)
+11. [Future Improvements](#-future-improvements)
 
 ---
 
@@ -72,11 +73,11 @@ The robot operates in a **partially observable** 16×16 maze: it starts with no 
       │                                  │
 ┌─────▼──────────────────────────────────▼────────────┐
 │            Algorithms Layer                         │
-│   ┌──────────────────┐  ┌──────────────────────┐   │
+│   ┌──────────────────┐  ┌────────────────────── ┐   │
 │   │  flood_fill.py   │  │ incremental_astar.py  │   │
 │   │  BFS distance    │  │  A* + replanning      │   │
 │   │  propagation     │  │  heapq priority queue │   │
-│   └──────────────────┘  └──────────────────────┘   │
+│   └──────────────────┘  └────────────────────── ┘    │
 └─────────────────────┬───────────────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────────────┐
@@ -174,6 +175,7 @@ python main.py --algorithm astar --weight 1.5
 | `--run-index` | `-r` | `0` | Run number for repeated experiments |
 | `--no-save` | — | off | Disable metrics persistence |
 | `--weight` | — | `1.0` | A* heuristic weight (≥1.0) |
+| `--batch-dir` | — | *(none)* | Path to directory of `.txt` maze files for headless batch execution |
 
 ### Simulator Colour Legend
 
@@ -184,6 +186,79 @@ python main.py --algorithm astar --weight 1.5
 | 🔵 Blue | Higher distance value |
 | ⬜ White | Unreachable / unknown |
 | 🔵 Cyan | Visited cell (A* display) |
+
+---
+
+## 🤖 Batch / Auto-run Mode
+
+The batch mode allows you to run the solver **automatically and sequentially** across every maze file in a directory — no mms GUI, no manual interaction, no key presses between runs.
+
+### How It Works
+
+Instead of communicating with the mms C++ simulator via stdin/stdout, batch mode uses a **pure-Python mock simulator** (`core/mock_simulator.py`) that:
+
+1. **Parses** the ASCII `.txt` maze file into an in-memory truth wall grid.
+2. **Replaces** all `simulator_api` functions (wall queries, movement, display) with mock equivalents.
+3. **Runs** the existing 3-phase state machine (Exploration → Reverse → Speed Run) at near-instant CPU speed.
+
+The existing FloodFill and IncrementalAStar solvers work **completely unchanged** — only the I/O layer underneath is swapped.
+
+### Usage
+
+```bash
+# Run FloodFill on all maze files in mazes/
+python main.py --algorithm flood_fill --batch-dir mazes
+
+# Run A* on all maze files in mazes/
+python main.py --algorithm astar --batch-dir mazes
+
+# Run without saving results
+python main.py --algorithm flood_fill --batch-dir mazes --no-save
+```
+
+### Output Files
+
+Batch results are saved to **separate files** from standard live-run data so they never mix:
+
+```
+logs/
+├── floodfill_results.json           # Standard live-run data
+├── incrementalastar_results.json    # Standard live-run data
+├── batch_results_floodfill.json     # Batch mode data
+└── batch_results_incrementalastar.json  # Batch mode data
+```
+
+### Maze Typology Parsing
+
+Each run automatically extracts a **maze typology** from the filename. Filenames are expected to follow the pattern `[number]_[typology].txt`:
+
+| Filename | Extracted Typology |
+|---|---|
+| `0_common_maze.txt` | `common_maze` |
+| `3_dead_end_heavy.txt` | `dead_end_heavy` |
+| `5_spiral.txt` | `spiral` |
+| `my_maze.txt` | `example` *(fallback default)* |
+
+The typology is stored in the `maze_typology` field of `RunMetrics` and included in all JSON/CSV output.
+
+### Sample Batch Output
+
+```
+############################################################
+  BATCH MODE — 8 maze(s)  |  Algorithm: flood_fill
+############################################################
+
+  ...runs each maze through all 3 phases...
+
+############################################################
+  BATCH COMPLETE — 8/8 mazes solved
+############################################################
+  0_common_maze             typology=common_maze          goal=YES  moves=  274  path= 58
+  1_open_field              typology=open_field           goal=YES  moves=   49  path= 15
+  2_long_corridor           typology=long_corridor        goal=YES  moves=  189  path= 63
+  3_dead_end_heavy          typology=dead_end_heavy       goal=YES  moves=  129  path= 43
+  ...
+```
 
 ---
 
@@ -242,6 +317,7 @@ Plots are saved as high-resolution PNG files in `logs/plots/`.
 | `new_walls_found` | New wall discoveries during run | count |
 | `turn_ratio` | `turns / (moves + turns)` | fraction |
 | `moves_per_cell` | Average moves per unique cell visited | ratio |
+| `maze_typology` | Typology parsed from maze filename (e.g. `spiral`) | string |
 
 ---
 
@@ -322,6 +398,7 @@ robotica_proposta_1/
 ├── core/
 │   ├── __init__.py
 │   ├── maze.py                # MazeMap & Cell (bitmask walls, distances)
+│   ├── mock_simulator.py      # Pure-Python mock simulator for batch mode
 │   ├── robot.py               # RobotState (position, heading, history)
 │   └── simulator_api.py       # mms stdin/stdout interface
 │
@@ -331,9 +408,11 @@ robotica_proposta_1/
 │   ├── metrics.py             # RunMetrics dataclass & MetricsCollector
 │   └── plotting.py            # MazePlotter (bar charts, heatmaps, scatter)
 │
-├── mazes/                     # Custom .maz maze files
+├── mazes/                     # Maze files (.txt ASCII format)
 ├── logs/                      # Auto-generated metric logs (JSON/CSV)
-│   └── plots/                 # Generated plot images
+│   ├── plots/                 # Generated plot images
+│   ├── batch_results_*.json   # Batch mode results (separate from live runs)
+│   └── *_results.json         # Standard live-run results
 │
 ├── tests/
 │   ├── __init__.py
@@ -360,7 +439,7 @@ robotica_proposta_1/
 
 ### Engineering
 - [ ] **Maze generator**: Random perfect maze generation for automated testing
-- [ ] **Multi-maze batch runner**: Automated benchmark across hundreds of mazes
+- [x] **Multi-maze batch runner**: Automated benchmark across all mazes (`--batch-dir`)
 - [ ] **Memory-efficient wall encoding**: Pack two cells per byte
 - [ ] **Configuration file support**: YAML/TOML config instead of CLI flags
 - [ ] **CI/CD pipeline**: Automated testing on push
