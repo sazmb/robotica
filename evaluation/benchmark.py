@@ -116,12 +116,22 @@ class BenchmarkRunner:
             print(f"\n--- {algo} ({len(runs)} runs) ---")
             stats = self.collector.statistics(algo)
             for metric, s in stats.items():
-                print(
-                    f"  {metric:<25}: mean={s['mean']:.3f}  "
-                    f"median={s['median']:.3f}  "
-                    f"stdev={s['stdev']:.3f}  "
-                    f"[{s['min']} .. {s['max']}]"
-                )
+                if metric in ("phase1", "phase2", "phase3"):
+                    print(f"  {metric}:")
+                    for p_metric, p_s in s.items():
+                        print(
+                            f"    {p_metric:<23}: mean={p_s['mean']:.3f}  "
+                            f"median={p_s['median']:.3f}  "
+                            f"stdev={p_s['stdev']:.3f}  "
+                            f"[{p_s['min']} .. {p_s['max']}]"
+                        )
+                else:
+                    print(
+                        f"  {metric:<25}: mean={s['mean']:.3f}  "
+                        f"median={s['median']:.3f}  "
+                        f"stdev={s['stdev']:.3f}  "
+                        f"[{s['min']} .. {s['max']}]"
+                    )
 
         # Comparative table
         self.collector.print_comparison_table()
@@ -151,13 +161,26 @@ class BenchmarkRunner:
                          f"{sum(1 for r in runs if r.reached_goal)}/{len(runs)}\n")
 
             stats = self.collector.statistics(algo)
+            lines.append("### Whole-run Metrics")
             lines.append("| Metric | Mean | Median | StdDev | Min | Max |")
             lines.append("| --- | --- | --- | --- | --- | --- |")
             for metric, s in stats.items():
-                lines.append(
-                    f"| {metric} | {s['mean']} | {s['median']} | "
-                    f"{s['stdev']} | {s['min']} | {s['max']} |"
-                )
+                if metric not in ("phase1", "phase2", "phase3"):
+                    lines.append(
+                        f"| {metric} | {s['mean']} | {s['median']} | "
+                        f"{s['stdev']} | {s['min']} | {s['max']} |"
+                    )
+            
+            for phase in ("phase1", "phase2", "phase3"):
+                if phase in stats:
+                    lines.append(f"\n### {phase.capitalize()} Metrics")
+                    lines.append("| Metric | Mean | Median | StdDev | Min | Max |")
+                    lines.append("| --- | --- | --- | --- | --- | --- |")
+                    for p_metric, p_s in stats[phase].items():
+                        lines.append(
+                            f"| {p_metric} | {p_s['mean']} | {p_s['median']} | "
+                            f"{p_s['stdev']} | {p_s['min']} | {p_s['max']} |"
+                        )
 
         return "\n".join(lines)
 

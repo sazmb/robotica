@@ -146,7 +146,71 @@ class FloodFill:
             # Mark cell as visited in map
             self.maze.cell(self.robot.x, self.robot.y).visited = True
 
+    def get_shortest_path(
+        self, start_x: int, start_y: int, *, visited_only: bool = False,
+    ) -> list[tuple[int, int]]:
+        """
+        Trace the flood-fill distance gradient from (start_x, start_y) to
+        the current goal and return the ordered path.
+
+        When ``visited_only=True`` (Phase 3 speed-run mode), the distance
+        map is re-flooded using **only visited cells** before tracing.
+        This guarantees the returned path never crosses a cell the robot
+        has not physically entered.
+
+        This method does NOT issue any simulator commands; it only reads
+        ``self.maze.cells[x][y].distance`` values.
+
+        Args:
+            start_x: Starting column index.
+            start_y: Starting row index.
+            visited_only: If True, re-flood and trace through visited
+                cells only — treating unvisited cells as impassable.
+
+        Returns:
+            Ordered list of (x, y) from start → goal.
+            Returns ``[(start_x, start_y)]`` if already at the goal.
+            Returns ``[]`` if the goal is unreachable.
+        """
+        # Re-flood with the appropriate constraint
+        if visited_only:
+            self._flood_visited_only()
+        else:
+            self._flood_from_goal()
+
+        # Check start is reachable
+        if not self.maze.in_bounds(start_x, start_y):
+            api.log_info(f"FloodFill.get_shortest_path: ({start_x},{start_y}) out of bounds")
+            return []
+
+        if self.maze.cells[start_x][start_y].distance >= 9999:
+            api.log_info(
+                f"FloodFill.get_shortest_path: goal unreachable from ({start_x},{start_y})"
+                f" (visited_only={visited_only})"
+            )
+            return []
+
+        path: list[tuple[int, int]] = [(start_x, start_y)]
+        visited: set[tuple[int, int]] = {(start_x, start_y)}
+        x, y = start_x, start_y
+
+        while not self.maze.is_goal(x, y):
+            neighbours = self.maze.open_neighbours(
+                x, y, visited_only=visited_only,
+            )
+            if not neighbours:
+                break  # trapped — should not happen on a valid map
+            nxt = min(neighbours, key=lambda p: self.maze.cells[p[0]][p[1]].distance)
+            if nxt in visited:
+                break  # loop guard for identical-distance ties
+            x, y = nxt
+            visited.add((x, y))
+            path.append((x, y))
+
+        return path
+
     def run_fast(self, path: list[tuple[int, int]]) -> None:
+
         """
         Execute a known path as fast as possible (no sensing).
 
@@ -212,6 +276,48 @@ class FloodFill:
             current_dist = self.maze.cells[x][y].distance
 
             for nx, ny in self.maze.open_neighbours(x, y):
+                neighbour = self.maze.cells[nx][ny]
+                if neighbour.distance > current_dist + 1:
+                    neighbour.distance = current_dist + 1
+                    queue.append((nx, ny))
+
+    def _flood_visited_only(self) -> None:
+        """
+        BFS-based flood propagation restricted to **visited cells only**.
+
+        Identical to ``_flood_from_goal`` except that ``open_neighbours``
+        is called with ``visited_only=True``.  Any cell the robot has
+        never entered is treated as an impassable wall — its distance
+        remains at INF and it will never appear in a traced path.
+
+        Used exclusively by Phase 3 (speed run) to ensure the route
+        only passes through physically explored territory.
+
+        Time complexity: O(V) where V = number of visited cells.
+        """
+        INF = 9999
+        self.maze.reset_distances(infinity=INF)
+
+        queue: deque[tuple[int, int]] = deque()
+        for gx, gy in self.maze.goal_cells:
+            if self.maze.in_bounds(gx, gy) and self.maze.cells[gx][gy].visited:
+                self.maze.cells[gx][gy].distance = 0
+                queue.append((gx, gy))
+
+        if not queue:
+            api.log_info(
+                "FloodFill._flood_visited_only: no goal cell has been visited — "
+                "speed-run path will be empty"
+            )
+            return
+
+        while queue:
+            x, y = queue.popleft()
+            current_dist = self.maze.cells[x][y].distance
+
+            for nx, ny in self.maze.open_neighbours(
+                x, y, visited_only=True,
+            ):
                 neighbour = self.maze.cells[nx][ny]
                 if neighbour.distance > current_dist + 1:
                     neighbour.distance = current_dist + 1

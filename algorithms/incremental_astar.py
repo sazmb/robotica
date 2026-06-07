@@ -220,7 +220,27 @@ class IncrementalAStar:
             # Mark visited
             self.maze.cell(self.robot.x, self.robot.y).visited = True
 
+    def run_fast(self, path: list[tuple[int, int]]) -> None:
+        """
+        Execute a known path as fast as possible without sensing walls.
+
+        Used for the Phase 3 speed-run after the maze has been fully mapped
+        in Phases 1 and 2.  No wall sensing or replanning occurs.
+
+        Args:
+            path: Ordered list of (x, y) cells from current position to goal.
+                  The first element should be the robot's current position.
+        """
+        api.log_info(f"IncrementalAStar: starting fast run ({len(path)-1} steps)")
+        for nx, ny in path[1:]:   # Skip the starting cell
+            cx, cy = self.robot.x, self.robot.y
+            direction = self.maze.direction_to(cx, cy, nx, ny)
+            if direction:
+                self.robot.face_direction(direction)
+                self.robot.move_forward()
+
     def get_metrics(self) -> dict:
+
         """
         Return performance metrics for this run.
 
@@ -415,7 +435,7 @@ class IncrementalAStar:
                     else:
                         api.set_color(cell.x, cell.y, "Y")
                 else:
-                    api.set_color(cell.x, cell.y, "W")
+                    api.set_color(cell.x, cell.y, "k")
 
     def _color_path(
         self, path: list[tuple[int, int]], color: str = "G"

@@ -276,7 +276,9 @@ class MazeMap:
     # Traversal helpers
     # ------------------------------------------------------------------
 
-    def open_neighbours(self, x: int, y: int) -> list[tuple[int, int]]:
+    def open_neighbours(
+        self, x: int, y: int, *, visited_only: bool = False,
+    ) -> list[tuple[int, int]]:
         """
         Return the list of accessible neighbours of cell (x, y) —
         i.e., directions where no wall is recorded.
@@ -284,6 +286,12 @@ class MazeMap:
         Args:
             x: Column index.
             y: Row index.
+            visited_only: If True, only return neighbours whose
+                ``visited`` flag is True.  Unvisited cells are excluded
+                even when no wall blocks passage — effectively treating
+                unknown territory as impassable.  Used by the Phase 3
+                speed-run flood to guarantee the path only crosses
+                cells the robot has physically entered.
 
         Returns:
             List of (nx, ny) tuples for reachable neighbours.
@@ -295,6 +303,8 @@ class MazeMap:
                 dx, dy = DIR_DELTA[d]
                 nx, ny = x + dx, y + dy
                 if self.in_bounds(nx, ny):
+                    if visited_only and not self.cells[nx][ny].visited:
+                        continue
                     neighbours.append((nx, ny))
         return neighbours
 

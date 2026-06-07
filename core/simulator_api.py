@@ -182,6 +182,7 @@ def move_forward(distance: int = 1) -> bool:
         True if move succeeded (simulator replied 'ack'),
         False if the robot crashed (simulator replied 'crash').
     """
+    # move_forward was already correct, as it consumes the string to check for a crash!
     response = _command_str(f"moveForward {distance}")
     if response == "crash":
         log.warning("moveForward resulted in CRASH! distance=%d", distance)
@@ -192,27 +193,35 @@ def move_forward(distance: int = 1) -> bool:
 def turn_right() -> None:
     """
     Rotate the robot 90° clockwise (to the right).
-    No response is expected from the simulator.
+    Consumes the 'ack' response from the simulator to prevent buffer desync.
     """
-    _send("turnRight")
+    _command_str("turnRight")
 
 
 def turn_left() -> None:
     """
     Rotate the robot 90° counter-clockwise (to the left).
-    No response is expected from the simulator.
+    Consumes the 'ack' response from the simulator to prevent buffer desync.
     """
-    _send("turnLeft")
+    _command_str("turnLeft")
 
 
 def turn_right_45() -> None:
-    """Rotate the robot 45° clockwise."""
-    _send("turnRight45")
+    """
+    Rotate the robot 45° clockwise.
+    Consumes the 'ack' response from the simulator to prevent buffer desync.
+    """
+    _command_str("turnRight45")
 
 
 def turn_left_45() -> None:
-    """Rotate the robot 45° counter-clockwise."""
-    _send("turnLeft45")
+    """
+    Rotate the robot 45° counter-clockwise.
+    Consumes the 'ack' response from the simulator to prevent buffer desync.
+    """
+    _command_str("turnLeft45")
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -311,9 +320,9 @@ def ack_reset() -> None:
     """
     Acknowledge a reset event so the robot can restart exploration.
     Must be called after was_reset() returns True.
+    Consumes the 'ack' response from the simulator to prevent buffer desync.
     """
-    _send("ackReset")
-
+    _command_str("ackReset")
 
 # ---------------------------------------------------------------------------
 # Statistics
