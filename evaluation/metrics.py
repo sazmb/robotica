@@ -50,6 +50,7 @@ class RunMetrics:
     """
     algorithm: str = ""
     maze_name: str = ""
+    maze_typology: str = "example"
     run_index: int = 0
     visited_cells: int = 0
     total_cells: int = 256  # 16x16
@@ -85,11 +86,37 @@ class RunMetrics:
         return self.total_moves / self.visited_cells
 
     def to_dict(self) -> dict:
-        """Return a flat dictionary representation of all metrics."""
-        d = asdict(self)
-        d["exploration_ratio"] = round(self.exploration_ratio, 4)
-        d["turn_ratio"] = round(self.turn_ratio, 4)
-        d["moves_per_cell"] = round(self.moves_per_cell, 4)
+        """
+        Return a dictionary representation including nested phase data.
+
+        The top-level keys remain compatible with the original flat schema.
+        Phase breakdowns are nested under 'phase1', 'phase2', 'phase3'.
+        """
+        d: dict = {
+            "algorithm": self.algorithm,
+            "maze_name": self.maze_name,
+            "maze_typology": self.maze_typology,
+            "run_index": self.run_index,
+            "visited_cells": self.visited_cells,
+            "total_cells": self.total_cells,
+            "final_path_length": self.final_path_length,
+            "total_moves": self.total_moves,
+            "total_turns": self.total_turns,
+            "elapsed_seconds": self.elapsed_seconds,
+            "replan_count": self.replan_count,
+            "new_walls_found": self.new_walls_found,
+            "reached_goal": self.reached_goal,
+            "notes": self.notes,
+            # Derived whole-run values
+            "exploration_ratio": round(self.exploration_ratio, 4),
+            "turn_ratio": round(self.turn_ratio, 4),
+            "moves_per_cell": round(self.moves_per_cell, 4),
+            "speedrun_efficiency": round(self.speedrun_efficiency, 4),
+            # Per-phase breakdown
+            "phase1": self.phase1.to_dict(),
+            "phase2": self.phase2.to_dict(),
+            "phase3": self.phase3.to_dict(),
+        }
         return d
 
     def summary_str(self) -> str:
