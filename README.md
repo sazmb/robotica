@@ -218,15 +218,18 @@ python main.py --algorithm flood_fill --batch-dir mazes --no-save
 
 ### Output Files
 
-Batch results are saved to **separate files** from standard live-run data so they never mix:
-
 ```
 logs/
-├── floodfill_results.json           # Standard live-run data
-├── incrementalastar_results.json    # Standard live-run data
-├── batch_results_floodfill.json     # Batch mode data
-└── batch_results_incrementalastar.json  # Batch mode data
+├── live/
+│   ├── floodfill_results.json       # mms GUI live-run results
+│   └── incrementalastar_results.json
+├── batch/
+│   ├── floodfill_results.json       # headless batch-run results
+│   └── incrementalastar_results.json
+└── plots/                           # generated plot images
 ```
+
+Batch results go to `logs/batch/` and live mms-GUI results go to `logs/live/`. They are never mixed, but `analyse_results.py` loads from both automatically.
 
 ### Maze Typology Parsing
 
@@ -266,40 +269,51 @@ The typology is stored in the `maze_typology` field of `RunMetrics` and included
 
 ### Collecting Data
 
-Run both algorithms multiple times in the simulator (press the **Reset** button between runs). Metrics are auto-saved to `logs/` after each run:
+Run both algorithms multiple times in the simulator (press the **Reset** button between runs). Metrics are auto-saved to `logs/live/` after each run:
 
 ```
 logs/
-├── floodfill_results.json
-└── incrementalastar_results.json
+└── live/
+    ├── floodfill_results.json
+    └── incrementalastar_results.json
 ```
 
 ### Offline Analysis
 
-```python
-# analyse_results.py (run after collecting data)
-from evaluation.benchmark import analyse_saved_results
+Run the analysis script after collecting data. It automatically loads all JSON files from **both** `logs/live/` and `logs/batch/`, prints a comparison table, generates a Markdown report, and plots the data.
 
-analyse_saved_results(
-    "logs/floodfill_results.json",
-    "logs/incrementalastar_results.json",
-    output_dir="logs",
-)
+```bash
+# Analyze all results (live + batch) in the logs/ directory
+python analyse_results.py
+
+# Specify a custom directory
+python analyse_results.py --logs-dir my_custom_logs --output-dir my_reports
 ```
 
-### Generating Plots
+Sample output:
+```
+============================================================
+ Micromouse Benchmark Analysis
+============================================================
 
-```python
-from evaluation.plotting import plot_from_json
+[Live runs]  logs/live
+  Loaded    3 run(s) from: floodfill_results.json
+  Loaded    2 run(s) from: incrementalastar_results.json
 
-plot_from_json(
-    "logs/floodfill_results.json",
-    "logs/incrementalastar_results.json",
-    output_dir="logs/plots",
-)
+[Batch runs] logs/batch
+  Loaded    8 run(s) from: floodfill_results.json
+  Loaded    8 run(s) from: incrementalastar_results.json
+
+  Total runs loaded: 21
 ```
 
-Plots are saved as high-resolution PNG files in `logs/plots/`.
+> **Note on Batch vs. Live runs**: The `RunMetrics` JSON format is identical between both sources. The analysis script aggregates them all automatically. Batch mode gives you a larger, more statistically significant dataset collected without any manual effort.
+
+### Output Files
+
+After running the script, you will find:
+1. `logs/benchmark_report.md` — A detailed Markdown summary
+2. `logs/plots/` — High-resolution PNG plots (bar charts, heatmaps) comparing the algorithms.
 
 ---
 
@@ -409,10 +423,12 @@ robotica_proposta_1/
 │   └── plotting.py            # MazePlotter (bar charts, heatmaps, scatter)
 │
 ├── mazes/                     # Maze files (.txt ASCII format)
-├── logs/                      # Auto-generated metric logs (JSON/CSV)
-│   ├── plots/                 # Generated plot images
-│   ├── batch_results_*.json   # Batch mode results (separate from live runs)
-│   └── *_results.json         # Standard live-run results
+├── logs/                      # Auto-generated metric logs
+│   ├── live/                  # mms GUI live-run results
+│   │   └── *_results.json
+│   ├── batch/                 # Headless batch-run results
+│   │   └── *_results.json
+│   └── plots/                 # Generated plot images
 │
 ├── tests/
 │   ├── __init__.py

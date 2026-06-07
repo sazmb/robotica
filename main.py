@@ -62,7 +62,9 @@ from core.mock_simulator import mock_simulator_context, parse_typology
 
 DEFAULT_ALGORITHM = "flood_fill"   # "flood_fill" | "astar"
 SAVE_METRICS = True
-LOGS_DIR = project_root / "logs"
+LOGS_DIR       = project_root / "logs"          # root log directory
+LOGS_LIVE_DIR  = LOGS_DIR / "live"              # mms GUI live-run results
+LOGS_BATCH_DIR = LOGS_DIR / "batch"             # headless batch-run results
 MAZE_WIDTH = 16
 MAZE_HEIGHT = 16
 
@@ -124,7 +126,7 @@ Examples:
             "Path to a directory of .txt maze files for automated batch "
             "execution.  When set, the solver runs headlessly against each "
             "maze file in sequence (no mms GUI required).  Results are saved "
-            "to logs/batch_results_<algorithm>.json."
+            "to logs/batch/<algorithm>_results.json."
         ),
     )
     # Parse only known args to avoid issues with simulator injecting flags
@@ -194,15 +196,19 @@ def query_maze_dimensions() -> tuple[int, int]:
 
 def save_metrics(metrics: RunMetrics, logs_dir: Path) -> None:
     """
-    Append metrics to the algorithm's JSON log file.
+    Append metrics to the algorithm's JSON log file under ``logs/live/``.
+
+    Live-run data is kept in its own subdirectory so it never mixes
+    with headless batch results.
 
     Args:
         metrics:  Completed run metrics.
-        logs_dir: Directory for log files.
+        logs_dir: Base log directory (``logs/live/`` will be used).
     """
-    logs_dir.mkdir(parents=True, exist_ok=True)
+    live_dir = logs_dir / "live"
+    live_dir.mkdir(parents=True, exist_ok=True)
     safe_algo = metrics.algorithm.lower().replace(" ", "_")
-    log_file = logs_dir / f"{safe_algo}_results.json"
+    log_file = live_dir / f"{safe_algo}_results.json"
 
     existing: list[dict] = []
     if log_file.exists():
@@ -725,18 +731,19 @@ def _wait_for_reset(run_index: int) -> int:
 
 def save_batch_metrics(metrics: RunMetrics, logs_dir: Path) -> None:
     """
-    Append metrics to the batch-specific JSON log file.
+    Append metrics to the batch-specific JSON log file under ``logs/batch/``.
 
-    Output goes to ``batch_results_<algorithm>.json`` — separate from the
-    standard live-run log files so that batch and manual data never mix.
+    Batch data is kept in its own subdirectory so it never mixes with
+    live mms-GUI run data.
 
     Args:
         metrics:  Completed run metrics.
-        logs_dir: Directory for log files.
+        logs_dir: Base log directory (``logs/batch/`` will be used).
     """
-    logs_dir.mkdir(parents=True, exist_ok=True)
+    batch_dir = logs_dir / "batch"
+    batch_dir.mkdir(parents=True, exist_ok=True)
     safe_algo = metrics.algorithm.lower().replace(" ", "_")
-    log_file = logs_dir / f"batch_results_{safe_algo}.json"
+    log_file = batch_dir / f"{safe_algo}_results.json"
 
     existing: list[dict] = []
     if log_file.exists():

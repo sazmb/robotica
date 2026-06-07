@@ -55,23 +55,39 @@ def main() -> None:
     print(" Micromouse Benchmark Analysis")
     print("=" * 60)
 
-    # Load all JSON result files from the logs directory
     runner = BenchmarkRunner(output_dir=output_dir)
-    json_files = list(logs_dir.glob("*_results.json"))
 
-    if not json_files:
-        print(f"\n[WARNING] No result JSON files found in '{logs_dir}'.")
-        print("Run the simulator first, then re-run this script.")
-        print("Expected files: floodfill_results.json, incrementalastar_results.json")
-        return
+    # --- Load live-run results (logs/live/) ---
+    live_dir = logs_dir / "live"
+    live_files = sorted(live_dir.glob("*_results.json")) if live_dir.is_dir() else []
 
-    for json_file in sorted(json_files):
-        count = runner.load_from_json(json_file)
-        print(f"  Loaded {count} runs from: {json_file.name}")
+    if live_files:
+        print(f"\n[Live runs]  {live_dir}")
+        for json_file in live_files:
+            count = runner.load_from_json(json_file)
+            print(f"  Loaded {count:>4} run(s) from: {json_file.name}")
+    else:
+        print(f"\n[Live runs]  No result files found in '{live_dir}'.")
+        print("  Run the mms simulator and results will appear here.")
+
+    # --- Load batch-run results (logs/batch/) ---
+    batch_dir = logs_dir / "batch"
+    batch_files = sorted(batch_dir.glob("*_results.json")) if batch_dir.is_dir() else []
+
+    if batch_files:
+        print(f"\n[Batch runs] {batch_dir}")
+        for json_file in batch_files:
+            count = runner.load_from_json(json_file)
+            print(f"  Loaded {count:>4} run(s) from: {json_file.name}")
+    else:
+        print(f"\n[Batch runs] No result files found in '{batch_dir}'.")
+        print("  Run: python main.py --algorithm flood_fill --batch-dir mazes")
 
     if len(runner.collector) == 0:
-        print("\n[ERROR] No valid run data found.")
+        print("\n[ERROR] No valid run data found in either directory.")
         return
+
+    print(f"\n  Total runs loaded: {len(runner.collector)}")
 
     # Run analysis and print comparison table
     runner.run_analysis()
@@ -85,7 +101,6 @@ def main() -> None:
             runner.collector,
             output_dir=output_dir / "plots",
         )
-        # Build visit count maps from path histories (if available)
         plotter.generate_all()
         print(f"\n[Plots] All plots saved to: {output_dir / 'plots'}")
     except Exception as e:
@@ -95,6 +110,7 @@ def main() -> None:
     print("\n" + "=" * 60)
     print(" Analysis complete!")
     print("=" * 60)
+
 
 
 if __name__ == "__main__":
