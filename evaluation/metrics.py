@@ -135,6 +135,8 @@ class RunMetrics:
     Attributes:
         algorithm (str):          Algorithm name ('FloodFill' or 'IncrementalAStar').
         maze_name (str):          Identifier for the maze used.
+        maze_typology (str):      Qualitative maze category (e.g. 'long_corridors',
+                                  'dead_end_heavy', 'multiple_paths', 'unknown').
         run_index (int):          Run number for repeated experiments.
         visited_cells (int):      Total distinct cells entered across all phases.
         total_cells (int):        Total cells in the maze (e.g. 256 for 16×16).
@@ -152,6 +154,7 @@ class RunMetrics:
     """
     algorithm: str = ""
     maze_name: str = ""
+    maze_typology: str = "unknown"  # e.g. 'long_corridors', 'dead_end_heavy', 'multiple_paths'
     run_index: int = 0
     visited_cells: int = 0
     total_cells: int = 256          # 16×16
@@ -235,6 +238,7 @@ class RunMetrics:
         d: dict = {
             "algorithm": self.algorithm,
             "maze_name": self.maze_name,
+            "maze_typology": self.maze_typology,
             "run_index": self.run_index,
             "visited_cells": self.visited_cells,
             "total_cells": self.total_cells,
@@ -275,6 +279,7 @@ class RunMetrics:
         return (
             f"\n{sep}\n"
             f"[{self.algorithm}]  Maze: {self.maze_name}  |  Run: {self.run_index}\n"
+            f"  Typology: {self.maze_typology}\n"
             f"{sep}\n"
             f"  Goal reached:        {self.reached_goal}\n"
             f"  Total visited cells: {self.visited_cells}/{self.total_cells} "

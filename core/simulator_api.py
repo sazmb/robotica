@@ -338,7 +338,9 @@ def get_stat(stat: str) -> str:
     Returns:
         The stat value as a string (caller parses to int/float as needed).
     """
-    return _command_str(f"getStat {stat}")
+    stats= _command_str(f"getStat {stat}")
+    sys.stderr.write(f"STAT {stat} = {stats}\n")
+    return stats
 
 
 # ---------------------------------------------------------------------------

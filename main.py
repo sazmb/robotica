@@ -85,6 +85,7 @@ Examples:
   python main.py
   python main.py --algorithm astar
   python main.py --algorithm flood_fill --maze-name custom_maze_1
+  python main.py --maze-name open_arena --maze-typology multiple_paths
 """,
     )
     parser.add_argument(
@@ -114,6 +115,15 @@ Examples:
         type=float,
         default=1.0,
         help="Heuristic weight for A* (>1.0 = weighted A*; default: 1.0)",
+    )
+    parser.add_argument(
+        "--maze-typology", "-t",
+        default="unknown",
+        help=(
+            "Qualitative category for the maze being solved "
+            "(e.g. 'long_corridors', 'dead_end_heavy', 'multiple_paths'). "
+            "Stored in metrics for later grouped analysis (default: unknown)"
+        ),
     )
     # Parse only known args to avoid issues with simulator injecting flags
     args, _ = parser.parse_known_args()
@@ -546,7 +556,7 @@ def main() -> None:
     args = parse_args()
     api.log_info(
         f"Starting Micromouse solver (3-Phase) | Algorithm: {args.algorithm} | "
-        f"Maze: {args.maze_name} | Run: {args.run_index}"
+        f"Maze: {args.maze_name} | Typology: {args.maze_typology} | Run: {args.run_index}"
     )
 
     run_index = args.run_index
@@ -584,7 +594,8 @@ def main() -> None:
             _finalise_run(args, run_index, maze, robot, width, height,
                           phase1_m, PhaseMetrics(phase_name="ReverseExploration"),
                           PhaseMetrics(phase_name="SpeedRun"),
-                          final_path_length=0)
+                          final_path_length=0,
+                          maze_typology=args.maze_typology)
             run_index = _wait_for_reset(run_index)
             continue
 
@@ -603,7 +614,8 @@ def main() -> None:
             _finalise_run(args, run_index, maze, robot, width, height,
                           phase1_m, phase2_m,
                           PhaseMetrics(phase_name="SpeedRun"),
-                          final_path_length=0)
+                          final_path_length=0,
+                          maze_typology=args.maze_typology)
             run_index = _wait_for_reset(run_index)
             continue
 
@@ -620,6 +632,7 @@ def main() -> None:
             args, run_index, maze, robot, width, height,
             phase1_m, phase2_m, phase3_m,
             final_path_length=path_length,
+            maze_typology=args.maze_typology,
         )
 
         run_index = _wait_for_reset(run_index)
@@ -640,6 +653,7 @@ def _finalise_run(
     phase2_m: PhaseMetrics,
     phase3_m: PhaseMetrics,
     final_path_length: int,
+    maze_typology: str = "unknown",
 ) -> None:
     """
     Build a consolidated RunMetrics from the three phase objects, print a
@@ -654,6 +668,7 @@ def _finalise_run(
     metrics = RunMetrics(
         algorithm=algo_name,
         maze_name=args.maze_name,
+        maze_typology=maze_typology,
         run_index=run_index,
         visited_cells=robot.unique_cells_visited(),
         total_cells=width * height,
@@ -673,7 +688,7 @@ def _finalise_run(
 
     # Print summary to stderr (visible in simulator log panel)
     sys.stderr.write(metrics.summary_str())
-
+    api.get_stat("score")
     # Save to JSON log
     if not args.no_save:
         try:

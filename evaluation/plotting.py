@@ -19,6 +19,7 @@ Python: 3.11+
 from __future__ import annotations
 
 import json
+import statistics
 from pathlib import Path
 from typing import Optional
 
@@ -365,6 +366,96 @@ class MazePlotter:
         return output_path
 
     # ------------------------------------------------------------------
+    # Typology comparison
+    # ------------------------------------------------------------------
+
+    def plot_typology_comparison(
+        self,
+        metric: str = "total_moves",
+        filename: str = "typology_comparison.png",
+    ) -> Path:
+        """
+        Generate a grouped bar chart comparing algorithms across maze typologies.
+
+        For each unique ``maze_typology`` in the dataset, the mean of *metric*
+        is plotted side-by-side for every algorithm.  This makes it easy to see
+        whether a particular maze structure favours one solver over another.
+
+        Args:
+            metric:   Whole-run RunMetrics field to aggregate (default: 'total_moves').
+            filename: Output file name.
+
+        Returns:
+            Path to saved plot.
+        """
+        if not MATPLOTLIB_AVAILABLE:
+            raise RuntimeError("matplotlib is required for plotting.")
+
+        algos = self.collector.algorithms()
+        typologies = sorted({r.maze_typology for r in self.collector.runs_for()})
+
+        if not typologies:
+            raise ValueError("No typology data found in the collector.")
+
+        x = np.arange(len(typologies))
+        bar_width = 0.8 / max(len(algos), 1)
+
+        fig, ax = plt.subplots(figsize=(max(8, 2 * len(typologies)), 6))
+        fig.suptitle(
+            f"Algorithm Comparison by Maze Typology — {metric.replace('_', ' ').title()}",
+            fontsize=14, fontweight="bold",
+        )
+
+        for i, algo in enumerate(algos):
+            means, errs = [], []
+            for typology in typologies:
+                runs = [
+                    r for r in self.collector.runs_for(algo)
+                    if r.maze_typology == typology
+                ]
+                if runs:
+                    vals = [getattr(r, metric, 0) for r in runs]
+                    means.append(sum(vals) / len(vals))
+                    errs.append(
+                        statistics.stdev(vals) if len(vals) > 1 else 0.0
+                    )
+                else:
+                    means.append(0.0)
+                    errs.append(0.0)
+
+            offset = (i - (len(algos) - 1) / 2) * bar_width
+            bars = ax.bar(
+                x + offset, means, bar_width,
+                yerr=errs, capsize=4,
+                label=algo,
+                color=ALGO_COLORS.get(algo, "#AAAAAA"),
+                alpha=0.85, edgecolor="white", linewidth=0.7,
+            )
+            for bar, mean in zip(bars, means):
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    bar.get_height() + 0.5,
+                    f"{mean:.0f}",
+                    ha="center", va="bottom", fontsize=7, color="white",
+                )
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(typologies, rotation=20, ha="right", fontsize=9)
+        ax.set_ylabel(metric.replace("_", " ").title(), fontsize=11)
+        ax.set_xlabel("Maze Typology", fontsize=11)
+        ax.legend(fontsize=9)
+        ax.grid(axis="y", alpha=0.4)
+        ax.set_axisbelow(True)
+
+        plt.tight_layout()
+        output_path = self.output_dir / filename
+        plt.savefig(output_path, dpi=self.dpi, bbox_inches="tight",
+                    facecolor=fig.get_facecolor())
+        plt.close(fig)
+        print(f"[Plotter] Saved: {output_path}")
+        return output_path
+
+    # ------------------------------------------------------------------
     # Generate all plots
     # ------------------------------------------------------------------
 
@@ -388,6 +479,15 @@ class MazePlotter:
         paths.append(self.plot_comparison_bars())
         paths.append(self.plot_runtime_comparison())
         paths.append(self.plot_efficiency_scatter())
+
+        # Typology comparison — only generate when multiple typologies present
+        all_typologies = sorted(
+            {r.maze_typology for r in self.collector.runs_for()}
+        )
+        if len(all_typologies) > 1 or (
+            len(all_typologies) == 1 and all_typologies[0] != "unknown"
+        ):
+            paths.append(self.plot_typology_comparison())
 
         if visit_counts_by_algo:
             for algo, counts in visit_counts_by_algo.items():
@@ -415,6 +515,10 @@ def plot_from_json(
     """
     Load JSON benchmark files and generate all plots.
 
+    Old log files that pre-date the ``maze_typology`` field are handled
+    gracefully: ``RunMetrics.from_dict`` defaults the missing field to
+    ``"unknown"``.
+
     Example usage::
 
         plot_from_json(
@@ -433,8 +537,9 @@ def plot_from_json(
             with open(p, encoding="utf-8") as f:
                 data = json.load(f)
             for entry in data:
-                m = RunMetrics(**{k: v for k, v in entry.items()
-                                  if k in RunMetrics.__dataclass_fields__})
+                # from_dict handles missing fields (e.g. maze_typology)
+                # by falling back to the dataclass default.
+                m = RunMetrics.from_dict(entry)
                 collector.add(m)
 
     if len(collector) == 0:
