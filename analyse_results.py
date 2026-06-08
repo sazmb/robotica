@@ -43,6 +43,21 @@ def parse_args() -> argparse.Namespace:
         default="logs",
         help="Directory for output files and plots (default: logs/)",
     )
+    parser.add_argument(
+        "--maze-typology", "-t",
+        default=None,
+        metavar="TYPOLOGY",
+        help=(
+            "Filter analysis to runs with this maze typology label only "
+            "(e.g. 'long_corridors', 'dead_end_heavy'). "
+            "Omit to include all typologies."
+        ),
+    )
+    parser.add_argument(
+        "--list-typologies",
+        action="store_true",
+        help="List all maze typology labels present in the log files, then exit.",
+    )
     return parser.parse_args()
 
 
@@ -73,11 +88,46 @@ def main() -> None:
         print("\n[ERROR] No valid run data found.")
         return
 
+    # --list-typologies: just enumerate and exit
+    if args.list_typologies:
+        typologies = runner.typologies()
+        print(f"\nMaze typologies found ({len(typologies)}):")
+        for t in typologies:
+            runs = runner.runs_for_typology(t)
+            print(f"  {t!r:30s}  ({len(runs)} runs)")
+        return
+
+    # Optional typology filter
+    if args.maze_typology is not None:
+        filtered = runner.runs_for_typology(args.maze_typology)
+        if not filtered:
+            available = runner.typologies()
+            print(
+                f"\n[WARNING] No runs found for typology {args.maze_typology!r}. "
+                f"Available: {available}"
+            )
+            return
+        # Re-populate the runner with only the matching runs
+        from evaluation.metrics import MetricsCollector
+        filtered_collector = MetricsCollector()
+        for r in filtered:
+            filtered_collector.add(r)
+        runner.collector = filtered_collector
+        print(
+            f"\n[Filter] Restricted to typology={args.maze_typology!r} "
+            f"({len(filtered)} runs)"
+        )
+
     # Run analysis and print comparison table
     runner.run_analysis()
 
     # Save Markdown report
-    runner.save_summary_report(output_dir / "benchmark_report.md")
+    report_name = (
+        f"benchmark_report_{args.maze_typology}.md"
+        if args.maze_typology
+        else "benchmark_report.md"
+    )
+    runner.save_summary_report(output_dir / report_name)
 
     # Generate plots (requires matplotlib)
     try:

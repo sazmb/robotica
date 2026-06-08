@@ -88,13 +88,76 @@ class BenchmarkRunner:
 
         count = 0
         for entry in data:
-            m = RunMetrics(**{k: v for k, v in entry.items()
-                              if k in RunMetrics.__dataclass_fields__})
+            # Use from_dict so that old logs missing 'maze_typology' safely
+            # receive the field's dataclass default ('unknown').
+            m = RunMetrics.from_dict(entry)
             self.collector.add(m)
             count += 1
 
         print(f"[Benchmark] Loaded {count} runs from {path}")
         return count
+
+    # ------------------------------------------------------------------
+    # Typology helpers
+    # ------------------------------------------------------------------
+
+    def typologies(self) -> list[str]:
+        """
+        Return a sorted list of unique maze typology labels in the collected data.
+
+        Returns:
+            Sorted list of typology strings.
+        """
+        return sorted({r.maze_typology for r in self.collector.runs_for()})
+
+    def runs_for_typology(
+        self,
+        typology: str,
+        algorithm: str | None = None,
+    ) -> list[RunMetrics]:
+        """
+        Filter runs by maze typology (and optionally by algorithm).
+
+        Args:
+            typology:  The maze typology label to filter by.
+            algorithm: Optional algorithm name to further restrict results.
+
+        Returns:
+            List of matching RunMetrics.
+        """
+        runs = self.collector.runs_for(algorithm)
+        return [r for r in runs if r.maze_typology == typology]
+
+    # ------------------------------------------------------------------
+    # Version helpers
+    # ------------------------------------------------------------------
+
+    def versions(self) -> list[str]:
+        """
+        Return a sorted list of unique algorithm version tags in the collected data.
+
+        Returns:
+            Sorted list of version strings.
+        """
+        return sorted({r.algorithm_version for r in self.collector.runs_for()})
+
+    def runs_for_version(
+        self,
+        version: str,
+        algorithm: str | None = None,
+    ) -> list[RunMetrics]:
+        """
+        Filter runs by algorithm version tag (and optionally by algorithm name).
+
+        Args:
+            version:   The algorithm version tag to filter by (e.g. 'v1', 'v2').
+            algorithm: Optional algorithm name to further restrict results.
+
+        Returns:
+            List of matching RunMetrics.
+        """
+        runs = self.collector.runs_for(algorithm)
+        return [r for r in runs if r.algorithm_version == version]
 
     # ------------------------------------------------------------------
     # Analysis and output
@@ -116,12 +179,22 @@ class BenchmarkRunner:
             print(f"\n--- {algo} ({len(runs)} runs) ---")
             stats = self.collector.statistics(algo)
             for metric, s in stats.items():
-                print(
-                    f"  {metric:<25}: mean={s['mean']:.3f}  "
-                    f"median={s['median']:.3f}  "
-                    f"stdev={s['stdev']:.3f}  "
-                    f"[{s['min']} .. {s['max']}]"
-                )
+                if metric in ("phase1", "phase2", "phase3"):
+                    print(f"  {metric}:")
+                    for p_metric, p_s in s.items():
+                        print(
+                            f"    {p_metric:<23}: mean={p_s['mean']:.3f}  "
+                            f"median={p_s['median']:.3f}  "
+                            f"stdev={p_s['stdev']:.3f}  "
+                            f"[{p_s['min']} .. {p_s['max']}]"
+                        )
+                else:
+                    print(
+                        f"  {metric:<25}: mean={s['mean']:.3f}  "
+                        f"median={s['median']:.3f}  "
+                        f"stdev={s['stdev']:.3f}  "
+                        f"[{s['min']} .. {s['max']}]"
+                    )
 
         # Comparative table
         self.collector.print_comparison_table()
@@ -151,13 +224,78 @@ class BenchmarkRunner:
                          f"{sum(1 for r in runs if r.reached_goal)}/{len(runs)}\n")
 
             stats = self.collector.statistics(algo)
+            lines.append("### Whole-run Metrics")
             lines.append("| Metric | Mean | Median | StdDev | Min | Max |")
             lines.append("| --- | --- | --- | --- | --- | --- |")
             for metric, s in stats.items():
-                lines.append(
-                    f"| {metric} | {s['mean']} | {s['median']} | "
-                    f"{s['stdev']} | {s['min']} | {s['max']} |"
-                )
+                if metric not in ("phase1", "phase2", "phase3"):
+                    lines.append(
+                        f"| {metric} | {s['mean']} | {s['median']} | "
+                        f"{s['stdev']} | {s['min']} | {s['max']} |"
+                    )
+            
+            for phase in ("phase1", "phase2", "phase3"):
+                if phase in stats:
+                    lines.append(f"\n### {phase.capitalize()} Metrics")
+                    lines.append("| Metric | Mean | Median | StdDev | Min | Max |")
+                    lines.append("| --- | --- | --- | --- | --- | --- |")
+                    for p_metric, p_s in stats[phase].items():
+                        lines.append(
+                            f"| {p_metric} | {p_s['mean']} | {p_s['median']} | "
+                            f"{p_s['stdev']} | {p_s['min']} | {p_s['max']} |"
+                        )
+
+            # Per-typology breakdown
+            typologies = sorted({r.maze_typology for r in runs})
+            if len(typologies) > 1 or (len(typologies) == 1 and typologies[0] != "unknown"):
+                lines.append(f"\n### Results by Maze Typology")
+                lines.append("| Typology | Runs | Success | Avg Moves | Avg Time (s) |")
+                lines.append("| --- | --- | --- | --- | --- |")
+                for typology in typologies:
+                    t_runs = [r for r in runs if r.maze_typology == typology]
+                    successes = sum(1 for r in t_runs if r.reached_goal)
+                    avg_moves = (
+                        sum(r.total_moves for r in t_runs) / len(t_runs)
+                        if t_runs else 0.0
+                    )
+                    avg_time = (
+                        sum(r.elapsed_seconds for r in t_runs) / len(t_runs)
+                        if t_runs else 0.0
+                    )
+                    lines.append(
+                        f"| {typology} | {len(t_runs)} | {successes}/{len(t_runs)} | "
+                        f"{avg_moves:.1f} | {avg_time:.4f} |"
+                    )
+
+            # Per-version breakdown
+            vers = sorted({r.algorithm_version for r in runs})
+            if len(vers) > 1 or (len(vers) == 1 and vers[0] != "v1"):
+                lines.append(f"\n### Results by Algorithm Version")
+                lines.append("| Version | Runs | Success | Avg Moves | Avg Turns | Avg Time (s) | Avg Path Len |")
+                lines.append("| --- | --- | --- | --- | --- | --- | --- |")
+                for ver in vers:
+                    v_runs = [r for r in runs if r.algorithm_version == ver]
+                    successes = sum(1 for r in v_runs if r.reached_goal)
+                    avg_moves = (
+                        sum(r.total_moves for r in v_runs) / len(v_runs)
+                        if v_runs else 0.0
+                    )
+                    avg_turns = (
+                        sum(r.total_turns for r in v_runs) / len(v_runs)
+                        if v_runs else 0.0
+                    )
+                    avg_time = (
+                        sum(r.elapsed_seconds for r in v_runs) / len(v_runs)
+                        if v_runs else 0.0
+                    )
+                    avg_path = (
+                        sum(r.final_path_length for r in v_runs) / len(v_runs)
+                        if v_runs else 0.0
+                    )
+                    lines.append(
+                        f"| {ver} | {len(v_runs)} | {successes}/{len(v_runs)} | "
+                        f"{avg_moves:.1f} | {avg_turns:.1f} | {avg_time:.4f} | {avg_path:.1f} |"
+                    )
 
         return "\n".join(lines)
 

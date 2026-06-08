@@ -201,15 +201,14 @@ logs/
 
 ### Offline Analysis
 
-```python
-# analyse_results.py (run after collecting data)
-from evaluation.benchmark import analyse_saved_results
+You can run the included `analyse_results.py` script to automatically load JSON results, perform statistical analysis, and generate a markdown report.
 
-analyse_saved_results(
-    "logs/floodfill_results.json",
-    "logs/incrementalastar_results.json",
-    output_dir="logs",
-)
+```bash
+# Run analysis on logs/ directory (default)
+python analyse_results.py
+
+# Run analysis on a specific logs directory and output to another directory
+python analyse_results.py --logs-dir custom_logs --output-dir my_results
 ```
 
 ### Generating Plots

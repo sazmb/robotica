@@ -220,7 +220,44 @@ class IncrementalAStar:
             # Mark visited
             self.maze.cell(self.robot.x, self.robot.y).visited = True
 
+    def run_fast(self, path: list[tuple[int, int]]) -> None:
+        """
+        Execute a known path as fast as possible without sensing walls.
+
+        Used for the Phase 3 speed-run after the maze has been fully mapped
+        in Phases 1 and 2.  No wall sensing or replanning occurs.
+
+        Args:
+            path: Ordered list of (x, y) cells from current position to goal.
+                  The first element should be the robot's current position.
+        """
+        api.log_info(f"IncrementalAStar: starting fast run ({len(path)-1} steps)")
+        for nx, ny in path[1:]:   # Skip the starting cell
+            cx, cy = self.robot.x, self.robot.y
+            direction = self.maze.direction_to(cx, cy, nx, ny)
+            if direction:
+                self.robot.face_direction(direction)
+                self.robot.move_forward()
+
+    def get_shortest_path(
+        self, start_x: int, start_y: int, visited_only: bool = False
+    ) -> list[tuple[int, int]]:
+        """
+        Compute the shortest path to the goal using A*.
+
+        Args:
+            start_x: Starting column.
+            start_y: Starting row.
+            visited_only: If True, restricts search to visited cells.
+
+        Returns:
+            Ordered list of (x, y) cells from start to goal, or empty list if unreachable.
+        """
+        path = self._astar(start_x, start_y, visited_only=visited_only)
+        return path if path is not None else []
+
     def get_metrics(self) -> dict:
+
         """
         Return performance metrics for this run.
 
@@ -259,7 +296,7 @@ class IncrementalAStar:
         return self.heuristic_weight * self.maze.manhattan_distance(x, y)
 
     def _astar(
-        self, start_x: int, start_y: int
+        self, start_x: int, start_y: int, visited_only: bool = False
     ) -> Optional[list[tuple[int, int]]]:
         """
         Run A* from (start_x, start_y) to the nearest goal cell.
@@ -307,7 +344,7 @@ class IncrementalAStar:
                 return self.maze.reconstruct_path(node.x, node.y)
 
             # Expand neighbours
-            for nx, ny in self.maze.open_neighbours(node.x, node.y):
+            for nx, ny in self.maze.open_neighbours(node.x, node.y, visited_only=visited_only):
                 if (nx, ny) in closed:
                     continue
                 tentative_g = self.maze.cell(node.x, node.y).g_cost + 1.0
@@ -415,7 +452,7 @@ class IncrementalAStar:
                     else:
                         api.set_color(cell.x, cell.y, "Y")
                 else:
-                    api.set_color(cell.x, cell.y, "W")
+                    api.set_color(cell.x, cell.y, "k")
 
     def _color_path(
         self, path: list[tuple[int, int]], color: str = "G"

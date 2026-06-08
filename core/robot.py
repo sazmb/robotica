@@ -264,6 +264,25 @@ class RobotState:
             f"Unique cells: {self.unique_cells_visited()}"
         )
 
+    def snapshot(self) -> dict:
+        """
+        Capture a point-in-time copy of the robot's performance counters.
+
+        Used by the orchestrator to compute per-phase metric deltas without
+        resetting the shared robot state between phases.
+
+        Returns:
+            Dict with keys:
+              'moves'   – current move_count
+              'turns'   – current turn_count
+              'visited' – frozenset of (x, y) cells visited so far
+        """
+        return {
+            "moves": self.move_count,
+            "turns": self.turn_count,
+            "visited": frozenset(self.cell_visits.keys()),
+        }
+
     def reset(self, start_x: int = 0, start_y: int = 0, heading: str = NORTH) -> None:
         """
         Reset the robot state for a fresh run (after simulator reset).
