@@ -129,6 +129,37 @@ class BenchmarkRunner:
         return [r for r in runs if r.maze_typology == typology]
 
     # ------------------------------------------------------------------
+    # Version helpers
+    # ------------------------------------------------------------------
+
+    def versions(self) -> list[str]:
+        """
+        Return a sorted list of unique algorithm version tags in the collected data.
+
+        Returns:
+            Sorted list of version strings.
+        """
+        return sorted({r.algorithm_version for r in self.collector.runs_for()})
+
+    def runs_for_version(
+        self,
+        version: str,
+        algorithm: str | None = None,
+    ) -> list[RunMetrics]:
+        """
+        Filter runs by algorithm version tag (and optionally by algorithm name).
+
+        Args:
+            version:   The algorithm version tag to filter by (e.g. 'v1', 'v2').
+            algorithm: Optional algorithm name to further restrict results.
+
+        Returns:
+            List of matching RunMetrics.
+        """
+        runs = self.collector.runs_for(algorithm)
+        return [r for r in runs if r.algorithm_version == version]
+
+    # ------------------------------------------------------------------
     # Analysis and output
     # ------------------------------------------------------------------
 
@@ -234,6 +265,36 @@ class BenchmarkRunner:
                     lines.append(
                         f"| {typology} | {len(t_runs)} | {successes}/{len(t_runs)} | "
                         f"{avg_moves:.1f} | {avg_time:.4f} |"
+                    )
+
+            # Per-version breakdown
+            vers = sorted({r.algorithm_version for r in runs})
+            if len(vers) > 1 or (len(vers) == 1 and vers[0] != "v1"):
+                lines.append(f"\n### Results by Algorithm Version")
+                lines.append("| Version | Runs | Success | Avg Moves | Avg Turns | Avg Time (s) | Avg Path Len |")
+                lines.append("| --- | --- | --- | --- | --- | --- | --- |")
+                for ver in vers:
+                    v_runs = [r for r in runs if r.algorithm_version == ver]
+                    successes = sum(1 for r in v_runs if r.reached_goal)
+                    avg_moves = (
+                        sum(r.total_moves for r in v_runs) / len(v_runs)
+                        if v_runs else 0.0
+                    )
+                    avg_turns = (
+                        sum(r.total_turns for r in v_runs) / len(v_runs)
+                        if v_runs else 0.0
+                    )
+                    avg_time = (
+                        sum(r.elapsed_seconds for r in v_runs) / len(v_runs)
+                        if v_runs else 0.0
+                    )
+                    avg_path = (
+                        sum(r.final_path_length for r in v_runs) / len(v_runs)
+                        if v_runs else 0.0
+                    )
+                    lines.append(
+                        f"| {ver} | {len(v_runs)} | {successes}/{len(v_runs)} | "
+                        f"{avg_moves:.1f} | {avg_turns:.1f} | {avg_time:.4f} | {avg_path:.1f} |"
                     )
 
         return "\n".join(lines)

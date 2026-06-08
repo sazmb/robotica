@@ -1,8 +1,8 @@
 # Micromouse Benchmark Report
 
-*Generated: 2026-06-08 08:58:28*
+*Generated: 2026-06-08 14:41:11*
 
-**Total runs:** 39
+**Total runs:** 47
 
 
 ## FloodFill
@@ -53,46 +53,46 @@ Goal success rate: 10/11
 
 ## IncrementalAStar
 
-Runs completed: 28
-Goal success rate: 24/28
+Runs completed: 36
+Goal success rate: 32/36
 
 ### Whole-run Metrics
 | Metric | Mean | Median | StdDev | Min | Max |
 | --- | --- | --- | --- | --- | --- |
-| visited_cells | 134.5 | 168.5 | 68.9796 | 16 | 216 |
-| final_path_length | 54.2857 | 58.0 | 22.6272 | 14 | 94 |
-| total_moves | 223.9643 | 268.0 | 94.0608 | 45 | 326 |
-| total_turns | 116.8929 | 121.0 | 52.2326 | 15 | 206 |
-| elapsed_seconds | 26.9868 | 20.1704 | 17.3 | 6.2211 | 86.6162 |
-| replan_count | 61.6071 | 66.0 | 36.4004 | 2 | 135 |
-| new_walls_found | 102.8929 | 126.0 | 52.5233 | 7 | 178 |
+| visited_cells | 121.9722 | 133.0 | 70.3365 | 15 | 216 |
+| final_path_length | 53.4444 | 58.0 | 25.9025 | 14 | 94 |
+| total_moves | 213.5278 | 268.0 | 104.2778 | 42 | 326 |
+| total_turns | 110.75 | 121.0 | 59.0014 | 7 | 206 |
+| elapsed_seconds | 31.9977 | 20.913 | 29.0271 | 6.2211 | 166.652 |
+| replan_count | 55.1667 | 62.0 | 37.0448 | 0 | 135 |
+| new_walls_found | 92.3056 | 99.0 | 54.8358 | 1 | 178 |
 
 ### Phase1 Metrics
 | Metric | Mean | Median | StdDev | Min | Max |
 | --- | --- | --- | --- | --- | --- |
-| moves | 107.7857 | 112.0 | 60.0841 | 15 | 214 |
-| turns | 56.8214 | 51.0 | 35.7978 | 5 | 136 |
-| cells_visited | 92.8571 | 109.5 | 45.8352 | 15 | 190 |
-| time_seconds | 12.8979 | 10.2398 | 8.3142 | 3.3266 | 37.6369 |
-| walls_found | 74.0357 | 87.0 | 37.644 | 6 | 172 |
-| replan_count | 45.2857 | 51.0 | 26.6303 | 2 | 129 |
+| moves | 98.2222 | 112.0 | 60.4025 | 14 | 214 |
+| turns | 50.6389 | 51.0 | 35.6668 | 1 | 136 |
+| cells_visited | 85.5833 | 104.0 | 47.4645 | 14 | 190 |
+| time_seconds | 15.0012 | 11.5846 | 12.3013 | 3.0028 | 62.9054 |
+| walls_found | 67.5 | 83.0 | 39.9124 | 1 | 172 |
+| replan_count | 41.2222 | 51.0 | 27.3998 | 0 | 129 |
 
 ### Phase2 Metrics
 | Metric | Mean | Median | StdDev | Min | Max |
 | --- | --- | --- | --- | --- | --- |
-| moves | 69.5714 | 74.0 | 32.6036 | 14 | 118 |
-| turns | 36.5 | 33.0 | 20.2128 | 4 | 82 |
-| cells_visited | 39.9643 | 32.5 | 34.0169 | 0 | 88 |
-| time_seconds | 8.2043 | 6.8983 | 5.9434 | 1.6133 | 31.1174 |
-| walls_found | 28.8571 | 23.5 | 26.1898 | 0 | 67 |
-| replan_count | 16.3214 | 12.0 | 15.8979 | 0 | 42 |
+| moves | 67.8333 | 74.0 | 35.5725 | 14 | 118 |
+| turns | 36.0556 | 33.0 | 22.2312 | 3 | 82 |
+| cells_visited | 34.8611 | 28.0 | 32.0376 | 0 | 88 |
+| time_seconds | 9.9783 | 6.9046 | 10.4972 | 1.6133 | 59.9172 |
+| walls_found | 24.8056 | 16.0 | 24.582 | 0 | 67 |
+| replan_count | 13.9444 | 10.0 | 14.84 | 0 | 42 |
 
 ### Phase3 Metrics
 | Metric | Mean | Median | StdDev | Min | Max |
 | --- | --- | --- | --- | --- | --- |
-| moves | 46.6071 | 56.0 | 24.1129 | 13 | 94 |
-| turns | 23.5714 | 27.0 | 11.8116 | 4 | 46 |
-| cells_visited | 0.6786 | 0.0 | 1.6567 | 0 | 6 |
-| time_seconds | 5.8846 | 3.6921 | 7.4006 | 0.7188 | 38.8135 |
+| moves | 47.4722 | 56.0 | 26.9194 | 13 | 94 |
+| turns | 24.0556 | 27.0 | 14.2947 | 3 | 46 |
+| cells_visited | 0.5278 | 0.0 | 1.483 | 0 | 6 |
+| time_seconds | 7.0182 | 4.013 | 9.2575 | 0.7188 | 43.8294 |
 | walls_found | 0 | 0.0 | 0.0 | 0 | 0 |
 | replan_count | 0 | 0.0 | 0.0 | 0 | 0 |

@@ -125,6 +125,15 @@ Examples:
             "Stored in metrics for later grouped analysis (default: unknown)"
         ),
     )
+    parser.add_argument(
+        "--algorithm-version", "-v",
+        default="v1",
+        help=(
+            "Version tag for the algorithm implementation being tested "
+            "(e.g. 'v1', 'v2', 'weighted'). Allows comparing different revisions "
+            "of the same algorithm in post-run analysis (default: v1)"
+        ),
+    )
     # Parse only known args to avoid issues with simulator injecting flags
     args, _ = parser.parse_known_args()
     return args
@@ -380,9 +389,13 @@ def _run_speed_phase(
     _animate_visited_cells(maze)
 
     # ── Step 2: Compute shortest path (visited-only) ─────────────────
-    ff = FloodFill(maze, robot)   # __init__ calls _flood_from_goal() automatically
-    path = ff.get_shortest_path(robot.x, robot.y, visited_only=True)
-    path_length = max(0, len(path) - 1)
+    if algorithm == "flood_fill":
+        solver = FloodFill(maze, robot)
+    else:
+        solver = IncrementalAStar(maze, robot)
+
+    path = solver.get_shortest_path(robot.x, robot.y, visited_only=True)
+    path_length = max(0, len(path) - 1) if path else 0
 
     # ── Step 3: Highlight shortest path on the display ───────────────
     if path:
@@ -398,11 +411,7 @@ def _run_speed_phase(
         api.log_info(f"Speed run path length: {path_length} steps")
         try:
             # Use the appropriate solver's run_fast method
-            if algorithm == "flood_fill":
-                ff.run_fast(path)
-            else:
-                astar = IncrementalAStar(maze, robot)
-                astar.run_fast(path)
+            solver.run_fast(path)
             reached = maze.is_goal(robot.x, robot.y)
         except Exception as exc:
             api.log_error(f"Speed run exception: {exc}")
@@ -555,8 +564,9 @@ def main() -> None:
     """
     args = parse_args()
     api.log_info(
-        f"Starting Micromouse solver (3-Phase) | Algorithm: {args.algorithm} | "
-        f"Maze: {args.maze_name} | Typology: {args.maze_typology} | Run: {args.run_index}"
+        f"Starting Micromouse solver (3-Phase) | Algorithm: {args.algorithm} "
+        f"({args.algorithm_version}) | Maze: {args.maze_name} | "
+        f"Typology: {args.maze_typology} | Run: {args.run_index}"
     )
 
     run_index = args.run_index
@@ -595,7 +605,8 @@ def main() -> None:
                           phase1_m, PhaseMetrics(phase_name="ReverseExploration"),
                           PhaseMetrics(phase_name="SpeedRun"),
                           final_path_length=0,
-                          maze_typology=args.maze_typology)
+                          maze_typology=args.maze_typology,
+                          algorithm_version=args.algorithm_version)
             run_index = _wait_for_reset(run_index)
             continue
 
@@ -615,7 +626,8 @@ def main() -> None:
                           phase1_m, phase2_m,
                           PhaseMetrics(phase_name="SpeedRun"),
                           final_path_length=0,
-                          maze_typology=args.maze_typology)
+                          maze_typology=args.maze_typology,
+                          algorithm_version=args.algorithm_version)
             run_index = _wait_for_reset(run_index)
             continue
 
@@ -633,6 +645,7 @@ def main() -> None:
             phase1_m, phase2_m, phase3_m,
             final_path_length=path_length,
             maze_typology=args.maze_typology,
+            algorithm_version=args.algorithm_version,
         )
 
         run_index = _wait_for_reset(run_index)
@@ -654,6 +667,7 @@ def _finalise_run(
     phase3_m: PhaseMetrics,
     final_path_length: int,
     maze_typology: str = "unknown",
+    algorithm_version: str = "v1",
 ) -> None:
     """
     Build a consolidated RunMetrics from the three phase objects, print a
@@ -667,6 +681,7 @@ def _finalise_run(
 
     metrics = RunMetrics(
         algorithm=algo_name,
+        algorithm_version=algorithm_version,
         maze_name=args.maze_name,
         maze_typology=maze_typology,
         run_index=run_index,

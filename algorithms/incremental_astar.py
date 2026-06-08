@@ -239,6 +239,23 @@ class IncrementalAStar:
                 self.robot.face_direction(direction)
                 self.robot.move_forward()
 
+    def get_shortest_path(
+        self, start_x: int, start_y: int, visited_only: bool = False
+    ) -> list[tuple[int, int]]:
+        """
+        Compute the shortest path to the goal using A*.
+
+        Args:
+            start_x: Starting column.
+            start_y: Starting row.
+            visited_only: If True, restricts search to visited cells.
+
+        Returns:
+            Ordered list of (x, y) cells from start to goal, or empty list if unreachable.
+        """
+        path = self._astar(start_x, start_y, visited_only=visited_only)
+        return path if path is not None else []
+
     def get_metrics(self) -> dict:
 
         """
@@ -279,7 +296,7 @@ class IncrementalAStar:
         return self.heuristic_weight * self.maze.manhattan_distance(x, y)
 
     def _astar(
-        self, start_x: int, start_y: int
+        self, start_x: int, start_y: int, visited_only: bool = False
     ) -> Optional[list[tuple[int, int]]]:
         """
         Run A* from (start_x, start_y) to the nearest goal cell.
@@ -327,7 +344,7 @@ class IncrementalAStar:
                 return self.maze.reconstruct_path(node.x, node.y)
 
             # Expand neighbours
-            for nx, ny in self.maze.open_neighbours(node.x, node.y):
+            for nx, ny in self.maze.open_neighbours(node.x, node.y, visited_only=visited_only):
                 if (nx, ny) in closed:
                     continue
                 tentative_g = self.maze.cell(node.x, node.y).g_cost + 1.0

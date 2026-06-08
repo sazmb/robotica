@@ -134,6 +134,9 @@ class RunMetrics:
 
     Attributes:
         algorithm (str):          Algorithm name ('FloodFill' or 'IncrementalAStar').
+        algorithm_version (str):  Version tag for the algorithm implementation
+                                  (e.g. 'v1', 'v2', 'weighted'). Allows comparing
+                                  different revisions of the same algorithm.
         maze_name (str):          Identifier for the maze used.
         maze_typology (str):      Qualitative maze category (e.g. 'long_corridors',
                                   'dead_end_heavy', 'multiple_paths', 'unknown').
@@ -153,6 +156,7 @@ class RunMetrics:
         phase3 (PhaseMetrics):    Phase 3 — Speed run (start → centre, optimal).
     """
     algorithm: str = ""
+    algorithm_version: str = "v1"   # e.g. 'v1', 'v2', 'weighted' — for cross-version comparison
     maze_name: str = ""
     maze_typology: str = "unknown"  # e.g. 'long_corridors', 'dead_end_heavy', 'multiple_paths'
     run_index: int = 0
@@ -237,6 +241,7 @@ class RunMetrics:
         """
         d: dict = {
             "algorithm": self.algorithm,
+            "algorithm_version": self.algorithm_version,
             "maze_name": self.maze_name,
             "maze_typology": self.maze_typology,
             "run_index": self.run_index,
@@ -278,7 +283,7 @@ class RunMetrics:
         sep = "-" * 60
         return (
             f"\n{sep}\n"
-            f"[{self.algorithm}]  Maze: {self.maze_name}  |  Run: {self.run_index}\n"
+            f"[{self.algorithm}]  v{self.algorithm_version}  Maze: {self.maze_name}  |  Run: {self.run_index}\n"
             f"  Typology: {self.maze_typology}\n"
             f"{sep}\n"
             f"  Goal reached:        {self.reached_goal}\n"
