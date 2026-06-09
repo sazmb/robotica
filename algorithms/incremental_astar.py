@@ -351,15 +351,15 @@ class IncrementalAStar:
                     continue
 
                 # VERSIONE SENZA PENALITA' DI VISITA
-                # tentative_g = self.maze.cell(node.x, node.y).g_cost + 1.0
+                tentative_g = self.maze.cell(node.x, node.y).g_cost + 1.0
 
                 # VERSIONE CON PENALITA' DI VISITA
-                dist_to_goal = self.maze.manhattan_distance(nx, ny)
-                if self.exploration_mode and dist_to_goal > 4:
-                    penalty = min(3.0, 0.5 * self.robot.visit_count(nx, ny))
-                else:
-                    penalty = 0.0
-                tentative_g = self.maze.cell(node.x, node.y).g_cost + 1.0 + penalty
+                # dist_to_goal = self.maze.manhattan_distance(nx, ny)
+                # if self.exploration_mode and dist_to_goal > 4:
+                #     penalty = min(3.0, 0.5 * self.robot.visit_count(nx, ny))
+                # else:
+                #     penalty = 0.0
+                # tentative_g = self.maze.cell(node.x, node.y).g_cost + 1.0 + penalty
                 
                 neighbour = self.maze.cell(nx, ny)
 
