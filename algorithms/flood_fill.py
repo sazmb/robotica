@@ -91,6 +91,8 @@ class FloodFill:
         # Initialise flood distances from goal
         self._flood_from_goal()
 
+        self.exploration_mode = False # VERSIONE CON PENALITA' DI VISITA
+
     # ------------------------------------------------------------------
     # Public interface
     # ------------------------------------------------------------------
@@ -372,11 +374,25 @@ class FloodFill:
         if not neighbours:
             return None
 
-        def score(pos: tuple[int, int]) -> tuple[int, int]:
+        # VERSIONE SENZA PENALITA' DI VISITA
+        # def score(pos: tuple[int, int]) -> tuple[int, int]:
+        #     nx, ny = pos
+        #     cell = self.maze.cells[nx][ny]
+        #     visit_penalty = self.robot.visit_count(nx, ny)  # prefer unvisited
+        #     return (cell.distance, visit_penalty)
+        
+        # VERSIONE CON PENALITA' DI VISITA (da testare)
+        def score(pos):
             nx, ny = pos
             cell = self.maze.cells[nx][ny]
-            visit_penalty = self.robot.visit_count(nx, ny)  # prefer unvisited
-            return (cell.distance, visit_penalty)
+            if self.exploration_mode:
+                return (
+                    cell.distance + min(6, 2 * self.robot.visit_count(nx, ny))
+                )
+            return (
+                cell.distance,
+                self.robot.visit_count(nx, ny)
+            )
 
         best = min(neighbours, key=score)
         best_dist = self.maze.cells[best[0]][best[1]].distance
@@ -436,3 +452,7 @@ class FloodFill:
             x, y = nx, ny
 
         api.set_color(x, y, "G")  # Color the start
+
+    # VERSIONE CON PENALITA' DI VISITA (da testare)
+    def set_exploration_mode(self, enabled: bool):
+        self.exploration_mode = enabled
