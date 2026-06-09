@@ -327,6 +327,10 @@ def _run_phase(
                  f"| targets={goal_cells} ===")
 
     solver = _make_solver(algorithm, maze, robot, weight)
+     # VERSIONE CON PENALITA' DI VISITA
+    if phase_label == _PHASE_REVERSE:
+        solver.set_exploration_mode(True)
+
     snap_before = robot.snapshot()
     t0 = time.perf_counter()
 
