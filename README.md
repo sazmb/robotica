@@ -383,3 +383,43 @@ MIT License — See [LICENSE](LICENSE) for details.
 - Micromouse Wikipedia — Background on the competition
 - Classic literature on Flood Fill: P. Szymański et al. (2009)
 - LPA* / D* Lite: Koenig & Likhachev (2002)
+
+
+
+# Simulator Colour Legend
+
+The simulator display updates in real time and reflects the algorithm's internal reasoning at each step.
+
+**Common to both algorithms:**
+
+| Phase | Colour | Meaning |
+|-------|--------|---------|
+| Start | 🟡 Yellow | Starting cell (0,0), labeled "S" |
+| Start | 🟢 Green | Goal cells at the centre, labeled "G" |
+| Pre-Phase 3 | 🔵 Cyan | Cells visited during Phases 1 & 2 |
+| Pre-Phase 3 | ⬛ Black | Unexplored cells, labeled "?" |
+| Phase 3 | 🟢 Bright Green | Optimal path with step numbers |
+| Phase 3 | 🔵 Dark Cyan | Visited cells (background) |
+
+**Flood Fill (Phases 1 & 2):**
+
+The number displayed in each cell is the BFS distance value $d(x,y)$ — the estimated steps to goal under the current known map.
+
+| Colour | Distance $d$ | Meaning |
+|--------|-------------|---------|
+| 🟢 Green | $d = 0$ | Goal cells |
+| 🟡 Yellow | $1 \leq d \leq 4$ | Close to goal |
+| 🔵 Cyan | $5 \leq d \leq 14$ | Medium distance |
+| 🔵 Blue | $d \geq 15$ | Far from goal |
+| ⬜ White | $d = \infty$ | Unreachable under current map |
+
+**Incremental A* (Phases 1 & 2):**
+
+The number displayed in each cell is the $f$-value $f = g + h$ from the A* search.
+
+| Colour | Meaning |
+|--------|---------|
+| 🟢 Green | Goal cells |
+| 🔵 Cyan | Cells physically visited by the robot |
+| 🟡 Yellow | Cells in the search frontier (evaluated, not yet visited) |
+| ⬛ Black | Cells with $f = \infty$ (not yet reached by search) |
