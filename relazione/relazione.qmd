@@ -30,7 +30,7 @@ format:
         {\normalsize
         Kovacic Matteo --- 736588\\[0.3cm]
         Mansueti Simone --- 728046\\[0.3cm]
-        Zambelli Samuele --- 000000\\[1.5cm]
+        Zambelli Samuele --- 736800\\[1.5cm]
         }
         {\large Corso di Robotica}\\[0.3cm]
         {\large Anno Accademico 2025/2026}\\[1cm]
@@ -271,6 +271,60 @@ L'**Incremental A\*** è **deliberativo**: mantiene un percorso esplicito pianif
 | Affidabilità | 10/11 run (91%) | 32/36 run (89%) |
 | Complessità implementativa | Bassa | Alta |
 | Caso d'uso ideale | Labirinti con vicoli ciechi, gare | Labirinti aperti, ambienti più grandi |
+
+## Visualizzazione nel Simulatore
+
+Il simulatore mms fornisce un display grafico in tempo reale che colora le celle del labirinto in modo diverso a seconda della fase e dell'algoritmo in esecuzione. I colori non sono puramente estetici: riflettono direttamente il **ragionamento interno** dell'algoritmo, rendendo possibile osservare in tempo reale come il robot costruisce la mappa e pianifica il percorso.
+
+### Colori Comuni a Entrambi gli Algoritmi
+
+All'avvio di ogni run, indipendentemente dall'algoritmo scelto:
+
+| Colore | Significato |
+|--------|-------------|
+| 🟡 Giallo | Cella di partenza (0,0), etichettata "S" |
+| 🟢 Verde | Celle goal al centro del labirinto, etichettate "G" |
+
+Prima della Fase 3, il simulatore esegue un'animazione di copertura che mostra quali zone del labirinto sono state esplorate nelle fasi precedenti:
+
+| Colore | Significato |
+|--------|-------------|
+| 🔵 Ciano | Celle visitate durante le Fasi 1 e 2 |
+| ⬛ Nero | Celle mai visitate, etichettate "?" |
+
+Durante la Fase 3 (speed run), il percorso ottimo viene evidenziato:
+
+| Colore | Significato |
+|--------|-------------|
+| 🟢 Verde brillante | Percorso ottimo calcolato, con numero del passo |
+| 🔵 Ciano scuro | Sfondo delle celle visitate |
+
+### Colori del Flood Fill
+
+Durante le Fasi 1 e 2, il Flood Fill aggiorna i colori ad ogni re-flood, mostrando il gradiente delle distanze dal goal. Il numero visualizzato in ogni cella è il valore $d(x,y)$ — la distanza stimata dal goal nella mappa attualmente conosciuta.
+
+| Colore | Distanza $d$ | Significato |
+|--------|-------------|-------------|
+| 🟢 Verde | $d = 0$ | Celle goal |
+| 🟡 Giallo | $1 \leq d \leq 4$ | Celle molto vicine al goal |
+| 🔵 Ciano | $5 \leq d \leq 14$ | Celle a distanza media |
+| 🔵 Blu | $d \geq 15$ | Celle lontane dal goal |
+| ⬜ Bianco | $d = \infty$ | Cella irraggiungibile con la mappa attuale |
+
+Il gradiente cromatico permette di osservare visivamente come le distanze si propagano dal centro verso i bordi del labirinto, e come cambiano ad ogni nuovo muro scoperto.
+
+### Colori dell'Incremental A*
+
+Durante le Fasi 1 e 2, l'Incremental A* aggiorna i colori ad ogni replan, mostrando i valori $f = g + h$ calcolati dalla ricerca. Il numero in ogni cella è il valore $f(x,y)$ — il costo totale stimato del percorso passante per quella cella.
+
+| Colore | Significato |
+|--------|-------------|
+| 🟢 Verde | Celle goal |
+| 🔵 Ciano | Celle già visitate fisicamente dal robot |
+| 🟡 Giallo | Celle nella frontiera di ricerca (valutate ma non ancora visitate) |
+| ⬛ Nero | Celle con $f = \infty$, non ancora raggiungibili dalla ricerca |
+
+A differenza del Flood Fill, i colori dell'A* non mostrano un gradiente uniforme sull'intera griglia, ma solo le celle effettivamente esplorate dalla ricerca — evidenziando come l'euristica concentri l'esplorazione nelle direzioni più promettenti verso il goal.
 
 # Risultati Sperimentali
 
