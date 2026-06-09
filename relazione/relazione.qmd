@@ -1,0 +1,263 @@
+---
+title: "Micromouse Maze Solver"
+subtitle: "Confronto tra Flood Fill e Incremental A*"
+author: "Nome Cognome"
+date: today
+lang: it
+format:
+  pdf:
+    toc: true
+    toc-title: "Indice"
+    number-sections: true
+    colorlinks: true
+    geometry: margin=2.5cm
+    fontsize: 11pt
+execute:
+  echo: false
+  warning: false
+python: python
+---
+
+```{python}
+import json
+import pandas as pd
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+from pathlib import Path
+
+# Percorsi ai file di log (relativi a questo .qmd)
+LOGS_DIR = Path("logs")
+PLOTS_DIR = LOGS_DIR / "plots"
+
+with open(LOGS_DIR / "floodfill_results.json") as f:
+    ff_data = json.load(f)
+
+with open(LOGS_DIR / "incrementalastar_results.json") as f:
+    astar_data = json.load(f)
+```
+
+# Introduzione
+
+Questo progetto implementa un sistema completo di navigazione autonoma per il problema **Micromouse**: un robot che deve raggiungere il centro di un labirinto 16×16 partendo senza alcuna conoscenza della mappa, costruendola incrementalmente tramite sensori di prossimità.
+
+Sono stati implementati e confrontati due algoritmi di navigazione:
+
+- **Flood Fill** — propagazione BFS delle distanze, classico nelle competizioni Micromouse
+- **Incremental A\*** — pianificazione euristica con replanning adattivo, ispirato a LPA* e D* Lite
+
+Il robot opera in modalità **parzialmente osservabile**: scopre i muri solo quando li raggiunge con i sensori, e deve riadattare il percorso in tempo reale.
+
+# Architettura del Sistema
+
+Il sistema è organizzato in quattro livelli indipendenti:
+
+| Livello | Modulo | Responsabilità |
+|---------|--------|----------------|
+| I/O | `simulator_api.py` | Interfaccia stdin/stdout con il simulatore mms |
+| Stato | `maze.py`, `robot.py` | Mappa interna (bitmask) e posa del robot |
+| Algoritmi | `flood_fill.py`, `incremental_astar.py` | Logica di navigazione |
+| Valutazione | `metrics.py`, `benchmark.py`, `plotting.py` | Raccolta dati e analisi |
+
+## Ciclo di Esecuzione
+
+Ogni run è suddiviso in **tre fasi**:
+
+1. **Fase 1 — Esplorazione**: il robot parte da (0,0) e raggiunge il centro (7,7) scoprendo i muri
+2. **Fase 2 — Ritorno**: senza reset, torna a (0,0) su un percorso diverso, accumulando nuova conoscenza
+3. **Fase 3 — Speed Run**: con la mappa completa, esegue il percorso ottimo senza overhead di sensing
+
+# Algoritmi
+
+## Flood Fill
+
+Il Flood Fill assegna a ogni cella una *distanza* dal goal tramite propagazione BFS. Il robot si sposta sempre verso la cella adiacente con distanza minore. A ogni nuovo muro scoperto, le distanze vengono ricalcolate sull'intera griglia.
+
+**Complessità per step:** $O(W \times H)$ per il re-flood, con $W=H=16$ (256 celle).
+
+**Vantaggi:** completo, deterministico, facilmente debuggabile.  
+**Svantaggi:** nessun bias geometrico verso il goal, ricalcola tutta la mappa ad ogni muro.
+
+## Incremental A*
+
+L'Incremental A* usa una coda di priorità (heap) guidata dall'euristica $h = $ distanza di Manhattan dal goal. Quando viene scoperto un nuovo muro, invalida solo la porzione di percorso interessata e ripiega localmente.
+
+**Complessità per step:** $O(k \log k)$ dove $k \ll 256$ è la regione invalidata.
+
+**Vantaggi:** più efficiente su labirinti aperti, supporta A* pesato (parametro `--weight`).  
+**Svantaggi:** overhead computazionale per step, più complesso da implementare.
+
+# Risultati Sperimentali
+
+```{python}
+# Statistiche riassuntive dai dati reali
+ff_runs = len(ff_data)
+astar_runs = len(astar_data)
+
+ff_success = sum(1 for r in ff_data if r.get("goal_reached", False))
+astar_success = sum(1 for r in astar_data if r.get("goal_reached", False))
+
+ff_moves = [r["total_moves"] for r in ff_data if "total_moves" in r]
+astar_moves = [r["total_moves"] for r in astar_data if "total_moves" in r]
+
+ff_cells = [r["visited_cells"] for r in ff_data if "visited_cells" in r]
+astar_cells = [r["visited_cells"] for r in astar_data if "visited_cells" in r]
+
+ff_time = [r["elapsed_seconds"] for r in ff_data if "elapsed_seconds" in r]
+astar_time = [r["elapsed_seconds"] for r in astar_data if "elapsed_seconds" in r]
+```
+
+## Statistiche Generali
+
+```{python}
+import numpy as np
+
+summary = pd.DataFrame({
+    "Metrica": [
+        "Run totali",
+        "Goal raggiunto",
+        "Mosse totali (media)",
+        "Celle visitate (media)",
+        "Tempo run (media, s)",
+        "Replan count (media)",
+    ],
+    "Flood Fill": [
+        ff_runs,
+        f"{ff_success}/{ff_runs}",
+        f"{np.mean(ff_moves):.1f} ± {np.std(ff_moves):.1f}",
+        f"{np.mean(ff_cells):.1f} ± {np.std(ff_cells):.1f}",
+        f"{np.mean(ff_time):.1f} ± {np.std(ff_time):.1f}",
+        f"{np.mean([r.get('replan_count',0) for r in ff_data]):.1f}",
+    ],
+    "Incremental A*": [
+        astar_runs,
+        f"{astar_success}/{astar_runs}",
+        f"{np.mean(astar_moves):.1f} ± {np.std(astar_moves):.1f}",
+        f"{np.mean(astar_cells):.1f} ± {np.std(astar_cells):.1f}",
+        f"{np.mean(astar_time):.1f} ± {np.std(astar_time):.1f}",
+        f"{np.mean([r.get('replan_count',0) for r in astar_data]):.1f}",
+    ],
+})
+
+summary.to_markdown(index=False)
+```
+
+```{python}
+#| label: fig-confronto
+#| fig-cap: "Confronto tra i due algoritmi: mosse totali, celle visitate e tempo di esecuzione."
+
+fig, axes = plt.subplots(1, 3, figsize=(12, 4))
+
+metrics = [
+    (ff_moves, astar_moves, "Mosse totali"),
+    (ff_cells, astar_cells, "Celle visitate"),
+    (ff_time,  astar_time,  "Tempo (s)"),
+]
+
+colors = ["#4C72B0", "#DD8452"]
+
+for ax, (ff_vals, astar_vals, label) in zip(axes, metrics):
+    ax.boxplot(
+        [ff_vals, astar_vals],
+        labels=["Flood Fill", "A*"],
+        patch_artist=True,
+        boxprops=dict(facecolor="white"),
+        medianprops=dict(color="black", linewidth=2),
+    )
+    for patch, color in zip(ax.patches, colors):
+        patch.set_facecolor(color)
+        patch.set_alpha(0.6)
+    ax.set_title(label, fontsize=11)
+    ax.grid(axis="y", linestyle="--", alpha=0.5)
+
+plt.tight_layout()
+plt.savefig("confronto_boxplot.png", dpi=150, bbox_inches="tight")
+plt.show()
+```
+
+## Grafici di Analisi
+
+```{python}
+#| label: fig-bars
+#| fig-cap: "Confronto a barre dei principali indicatori di performance."
+
+img = mpimg.imread(str(PLOTS_DIR / "comparison_bars.png"))
+plt.figure(figsize=(10, 5))
+plt.imshow(img)
+plt.axis("off")
+plt.tight_layout()
+plt.show()
+```
+
+```{python}
+#| label: fig-scatter
+#| fig-cap: "Scatter plot efficienza: celle visitate vs mosse totali."
+
+img = mpimg.imread(str(PLOTS_DIR / "efficiency_scatter.png"))
+plt.figure(figsize=(10, 5))
+plt.imshow(img)
+plt.axis("off")
+plt.tight_layout()
+plt.show()
+```
+
+```{python}
+#| label: fig-runtime
+#| fig-cap: "Distribuzione del tempo di esecuzione per algoritmo."
+
+img = mpimg.imread(str(PLOTS_DIR / "runtime_comparison.png"))
+plt.figure(figsize=(10, 5))
+plt.imshow(img)
+plt.axis("off")
+plt.tight_layout()
+plt.show()
+```
+
+# Discussione
+
+## Efficienza di Esplorazione
+
+```{python}
+ff_exp = np.mean([r.get("visited_cells", 0) for r in ff_data]) / 256
+astar_exp = np.mean([r.get("visited_cells", 0) for r in astar_data]) / 256
+diff_cells = np.mean(ff_cells) - np.mean(astar_cells)
+```
+
+L'Incremental A* visita in media **`{python} f"{diff_cells:.0f}"`** celle in meno rispetto al Flood Fill (`{python} f"{astar_exp:.1%}"` vs `{python} f"{ff_exp:.1%}"` del labirinto), grazie alla guida euristica che concentra l'esplorazione nelle direzioni promettenti.
+
+## Affidabilità
+
+Il Flood Fill raggiunge il goal nel **`{python} f"{ff_success/ff_runs:.0%}"`** dei run (`{python} ff_success`/`{python} ff_runs`), contro il **`{python} f"{astar_success/astar_runs:.0%}"`** dell'A* (`{python} astar_success`/`{python} astar_runs`). La maggiore complessità dell'A* introduce qualche caso di fallimento in più su labirinti con molti vicoli ciechi.
+
+## Tradeoff Computazionale
+
+Il Flood Fill ricalcola l'intera griglia ad ogni muro scoperto ($O(256)$ per re-flood), mentre l'A* invalida solo la regione interessata. In pratica, su una griglia 16×16, la differenza di velocità è trascurabile; il vantaggio dell'A* emerge su griglie più grandi.
+
+# Conclusioni
+
+Entrambi gli algoritmi risolvono con successo il problema Micromouse in ambiente parzialmente osservabile.
+
+- Il **Flood Fill** è preferibile in contesti di gara per la sua semplicità, robustezza e comportamento deterministico.
+- L'**Incremental A\*** è più efficiente su labirinti aperti e scala meglio al crescere della dimensione, al costo di una maggiore complessità implementativa.
+
+Sviluppi futuri includono D* Lite (replanning completo con ricerca inversa), penalità per le svolte, e un generatore automatico di labirinti per testing su larga scala.
+
+# Appendice — Struttura del Progetto
+
+```
+robotica/
+├── main.py                    # Entry point — macchina a stati 3 fasi
+├── core/
+│   ├── maze.py                # MazeMap (bitmask muri + distanze)
+│   ├── robot.py               # RobotState (posizione, heading, storia)
+│   └── simulator_api.py       # Interfaccia stdin/stdout con mms
+├── algorithms/
+│   ├── flood_fill.py          # Solver Flood Fill
+│   └── incremental_astar.py   # Solver Incremental A*
+├── evaluation/
+│   ├── metrics.py             # RunMetrics + MetricsCollector
+│   ├── benchmark.py           # BenchmarkRunner
+│   └── plotting.py            # MazePlotter (grafici matplotlib)
+├── mazes/                     # 8 labirinti di test (.txt)
+├── logs/                      # Risultati JSON/CSV + grafici
+└── tests/                     # Suite pytest (maze, robot, algoritmi)
+```
