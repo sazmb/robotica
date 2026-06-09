@@ -175,18 +175,6 @@ python main.py --algorithm astar --weight 1.5
 | `--no-save` | — | off | Disable metrics persistence |
 | `--weight` | — | `1.0` | A* heuristic weight (≥1.0) |
 
-### Simulator Colour Legend
-
-| Colour | Meaning |
-|--------|----------|
-| 🟩 Green | Goal cell / optimal path |
-| 🟡 Yellow | Low distance / close to goal |
-| 🔵 Blue | Higher distance value |
-| ⬜ White | Unreachable / unknown |
-| 🔵 Cyan | Visited cell (A* display) |
-
----
-
 ## 📊 Running Benchmarks
 
 ### Collecting Data
@@ -411,7 +399,7 @@ The number displayed in each cell is the BFS distance value $d(x,y)$ — the est
 | 🟡 Yellow | $1 \leq d \leq 4$ | Close to goal |
 | 🔵 Cyan | $5 \leq d \leq 14$ | Medium distance |
 | 🔵 Blue | $d \geq 15$ | Far from goal |
-| ⬜ White | $d = \infty$ | Unreachable under current map |
+| 🔴 Red | $d = \infty$ | Unreachable under current map |
 
 **Incremental A* (Phases 1 & 2):**
 
