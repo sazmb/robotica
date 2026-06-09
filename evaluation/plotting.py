@@ -303,11 +303,12 @@ class MazePlotter:
     # Moves vs Path Length scatter
     # ------------------------------------------------------------------
 
-    def plot_efficiency_scatter(
+    """def plot_efficiency_scatter(
         self,
         filename: str = "efficiency_scatter.png",
     ) -> Path:
-        """
+     
+  
         Scatter plot of total moves vs. final path length for each run.
 
         Points closer to the diagonal y=x are more efficient (fewer
@@ -318,7 +319,7 @@ class MazePlotter:
 
         Returns:
             Path to saved plot.
-        """
+        
         if not MATPLOTLIB_AVAILABLE:
             raise RuntimeError("matplotlib is required for plotting.")
 
@@ -364,6 +365,100 @@ class MazePlotter:
         plt.close(fig)
         print(f"[Plotter] Saved: {output_path}")
         return output_path
+        """
+    
+    def plot_efficiency_scatter(
+        self,
+        filename: str = "efficiency_scatter.png",
+    ) -> Path:
+        """
+        Scatter plot of exploration (visited cells) vs. final path length.
+
+        Includes:
+        - Baseline: theoretical minimum path length (Manhattan distance
+            from (0,0) to (7,7) = 14 steps)
+        - Impossible region: area below the baseline (path length < 14
+            is mathematically unreachable on a 16x16 maze)
+
+        Args:
+            filename: Output file name.
+
+        Returns:
+            Path to saved plot.
+        """
+        if not MATPLOTLIB_AVAILABLE:
+            raise RuntimeError("matplotlib is required for plotting.")
+
+        BASELINE = 14  # Manhattan distance (0,0) -> (7,7) on a 16x16 maze
+
+        fig, ax = plt.subplots(figsize=(8, 6))
+        fig.suptitle(
+            "Exploration vs Final Path Length",
+            fontsize=13, fontweight="bold"
+        )
+
+        all_cells, all_paths = [], []
+        legend_patches = []
+
+        for algo in self.collector.algorithms():
+            runs = [r for r in self.collector.runs_for(algo) if r.reached_goal]
+            cells = [r.visited_cells for r in runs]
+            paths = [r.final_path_length for r in runs]
+            color = ALGO_COLORS.get(algo, "#AAAAAA")
+            ax.scatter(cells, paths, c=color, alpha=0.75, s=70,
+                    edgecolors="white", linewidths=0.5, label=algo, zorder=3)
+            all_cells.extend(cells)
+            all_paths.extend(paths)
+            legend_patches.append(
+                mpatches.Patch(color=color, label=algo)
+            )
+
+        if all_cells and all_paths:
+            x_min = 0
+            x_max = max(all_cells) + 10
+
+            # Impossible region: path length < BASELINE is unreachable
+            ax.axhspan(
+                0, BASELINE,
+                facecolor="#FF4444", alpha=0.12,
+                label=f"Impossible region (path < {BASELINE})",
+                zorder=1
+            )
+
+            # Baseline: theoretical minimum path length
+            ax.axhline(
+                y=BASELINE,
+                color="#FF4444", linestyle="--", linewidth=1.5, alpha=0.8,
+                label=f"Baseline (min path = {BASELINE})",
+                zorder=2
+            )
+            ax.text(
+                x_max * 0.02, BASELINE + 0.5,
+                f"Baseline (Manhattan min = {BASELINE})",
+                color="#FF4444", fontsize=8, alpha=0.9
+            )
+
+            ax.set_xlim(x_min, x_max)
+
+        ax.set_xlabel("Visited Cells During Exploration", fontsize=11)
+        ax.set_ylabel("Final Path Length (Speed Run)", fontsize=11)
+        ax.legend(handles=legend_patches + [
+            mpatches.Patch(color="#FF4444", alpha=0.3,
+                        label=f"Impossible region (< {BASELINE})"),
+            plt.Line2D([0], [0], linestyle="--", color="#FF4444",
+                    label=f"Baseline = {BASELINE}"),
+        ], fontsize=9)
+        ax.grid(alpha=0.3)
+        ax.set_axisbelow(True)
+
+        plt.tight_layout()
+        output_path = self.output_dir / filename
+        plt.savefig(output_path, dpi=self.dpi, bbox_inches="tight",
+                    facecolor=fig.get_facecolor())
+        plt.close(fig)
+        print(f"[Plotter] Saved: {output_path}")
+        return output_path
+    
 
     # ------------------------------------------------------------------
     # Typology comparison

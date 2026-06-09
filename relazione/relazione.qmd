@@ -14,7 +14,6 @@ format:
     fontsize: 11pt
     include-in-header:
       text: |
-        \AddToHook{cmd/section/before}{\clearpage}
         \usepackage{graphicx}
         \renewcommand{\maketitle}{}
     include-before-body:
@@ -61,270 +60,82 @@ with open(LOGS_DIR / "incrementalastar_results.json") as f:
 
 # Introduzione
 
-## Contesto e Motivazione
+Il problema **Micromouse** consiste nel navigare autonomamente un labirinto 16×16 partendo senza alcuna conoscenza della mappa. Il robot scopre i muri incrementalmente tramite sensori di prossimità e deve aggiornare la propria rappresentazione interna in tempo reale, bilanciando esplorazione e sfruttamento delle informazioni acquisite. Il problema rientra nella categoria degli ambienti parzialmente osservabili (POMDP), dove le decisioni devono essere prese sulla base di osservazioni locali incomplete.
 
-Il problema della navigazione autonoma in ambienti sconosciuti è uno dei temi fondamentali della robotica mobile. Un robot che opera nel mondo reale si trova sistematicamente a dover prendere decisioni di movimento in condizioni di **incertezza parziale o totale** sull'ambiente circostante: non conosce in anticipo la disposizione degli ostacoli, non ha una mappa precaricata, e deve costruire una rappresentazione interna dell'ambiente in tempo reale mentre si muove.
+Questo progetto implementa e confronta due approcci algoritmici distinti: **Flood Fill**, basato sulla propagazione BFS delle distanze, e **Incremental A\***, basato su pianificazione euristica con replanning adattivo ispirato a LPA* e D* Lite.
 
-Questo scenario rientra nella categoria dei problemi di **navigazione in ambiente parzialmente osservabile** (*Partially Observable Environment*), formalizzabile come un Processo Decisionale di Markov Parzialmente Osservabile (POMDP). In tali contesti, l'agente non dispone di uno stato globale completo del mondo, ma solo di osservazioni locali ottenute tramite i propri sensori. Le decisioni devono quindi essere prese sulla base di una **belief state** — una stima probabilistica o deterministica dello stato corrente del mondo — che viene aggiornata ad ogni nuova osservazione.
+# Architettura del Sistema
 
-Il problema **Micromouse** rappresenta un banco di prova classico e ben definito per testare algoritmi di navigazione autonoma in questo tipo di ambiente. Originatosi come competizione internazionale nel 1977 — con la prima gara ufficiale organizzata dall'IEEE nel 1979 — il Micromouse ha visto negli anni lo sviluppo di soluzioni sempre più sofisticate, diventando un riferimento consolidato nella comunità robotica per il confronto di strategie di esplorazione e path planning.
-
-## Il Problema Micromouse
-
-Il problema si definisce come segue: un robot di piccole dimensioni viene posto in un angolo di un labirinto quadrato di dimensioni 16×16 celle, con l'obiettivo di raggiungere la zona centrale (le quattro celle centrali del labirinto, ovvero le posizioni (7,7), (7,8), (8,7), (8,8) in un sistema di coordinate 0-indicizzato). Il robot non dispone di alcuna conoscenza preliminare della struttura del labirinto: non sa dove si trovano i muri, non ha una mappa, e non può comunicare con sistemi esterni durante l'esecuzione.
-
-Le uniche informazioni disponibili al robot in ogni istante sono quelle rilevate dai propri **sensori di prossimità**, che rilevano la presenza o assenza di muri nelle quattro direzioni cardinali rispetto alla posizione corrente. Man mano che il robot si muove, aggiorna una rappresentazione interna del labirinto, costruendo progressivamente una mappa parziale che diventa via via più completa.
-
-La sfida del problema risiede quindi nel trovare un equilibrio tra due obiettivi potenzialmente in conflitto:
-
-- **Esplorazione** (*exploration*): visitare celle nuove per acquisire informazioni sull'ambiente e costruire una mappa più completa
-- **Sfruttamento** (*exploitation*): utilizzare le informazioni già disponibili per muoversi il più efficientemente possibile verso il goal
-
-Questo dilemma esplorazione-sfruttamento è un tema ricorrente in robotica e nel reinforcement learning, e le diverse strategie di navigazione si differenziano proprio per come lo bilanciano.
-
-## Obiettivi del Progetto
-
-Il presente progetto ha come obiettivo l'implementazione e il confronto sperimentale di due approcci algoritmici al problema Micromouse, distinti per filosofia di navigazione e complessità computazionale:
-
-**Flood Fill** è un algoritmo basato sulla propagazione delle distanze tramite visita in ampiezza (BFS). Assegna a ogni cella del labirinto un valore numerico che rappresenta la distanza stimata dal goal, e guida il robot verso le celle con distanza decrescente. È l'algoritmo storicamente più utilizzato nelle competizioni Micromouse per la sua semplicità implementativa e la sua robustezza.
-
-**Incremental A\*** è un algoritmo di pianificazione euristica ispirato a tecniche di replanning incrementale come LPA* (*Lifelong Planning A\**) e D* Lite. Utilizza una funzione euristica — la distanza di Manhattan — per stimare il costo residuo verso il goal, concentrando la ricerca nelle direzioni più promettenti. La componente incrementale consente di invalidare e ricalcolare solo la porzione di percorso effettivamente interessata da un nuovo ostacolo scoperto, evitando di ripartire da zero ad ogni aggiornamento della mappa.
-
-Entrambi gli algoritmi operano all'interno di una **macchina a stati a tre fasi** che struttura l'esecuzione di ogni run: una fase di esplorazione verso il goal, una fase di ritorno verso l'origine lungo un percorso alternativo, e una fase di speed run finale in cui il robot esegue il percorso ottimo sulla mappa parzialmente costruita.
-
-## Struttura della Relazione
-
-La relazione è organizzata come segue. La sezione successiva descrive l'architettura software del sistema e i moduli che lo compongono. Segue l'illustrazione nel dettaglio del funzionamento dei due algoritmi implementati. Vengono poi presentati i risultati sperimentali ottenuti su un insieme di labirinti di test, seguiti dall'analisi e dal confronto delle prestazioni dei due approcci. La relazione si chiude con le conclusioni e i possibili sviluppi futuri.
-
-# Architettura del Sistema {#sec-architettura}
-
-## Panoramica Generale
-
-Il sistema è progettato secondo un'architettura a livelli che separa nettamente le responsabilità di ciascun componente. Questa scelta architetturale, ispirata ai principi della **robotica basata su componenti**, garantisce che ogni modulo sia indipendente, testabile separatamente, e sostituibile senza impattare il resto del sistema.
-
-Il robot interagisce con il simulatore esterno **mms** (*Micromouse Simulator*) esclusivamente tramite comunicazione testuale su stdin/stdout. Questo disaccoppiamento totale tra il codice di navigazione e il simulatore rende il sistema facilmente portabile: sostituendo il modulo di interfaccia, lo stesso codice di navigazione potrebbe operare su hardware reale.
-
-L'architettura è organizzata in quattro livelli sovrapposti:
+Il sistema è organizzato in quattro livelli indipendenti:
 
 | Livello | Modulo | Responsabilità |
 |---------|--------|----------------|
 | I/O | `simulator_api.py` | Interfaccia stdin/stdout con il simulatore mms |
-| Stato | `maze.py`, `robot.py` | Mappa interna (bitmask) e posa del robot |
+| Stato | `maze.py`, `robot.py` | Mappa interna a bitmask e posa del robot |
 | Algoritmi | `flood_fill.py`, `incremental_astar.py` | Logica di navigazione |
 | Valutazione | `metrics.py`, `benchmark.py`, `plotting.py` | Raccolta dati e analisi |
 
-## Il Livello di I/O — `simulator_api.py`
+`simulator_api.py` funge da layer **Adapter** tra il protocollo testuale del simulatore e il codice Python, esponendo funzioni di alto livello come `move_forward()` e `wall_front()`. `maze.py` rappresenta il labirinto tramite bitmask a 4 bit per cella (Nord/Sud/Est/Ovest), aggiornata incrementalmente ad ogni nuova osservazione. `robot.py` traccia posizione, orientamento e storia delle celle visitate.
 
-Il modulo `simulator_api.py` funge da **strato di astrazione** tra il codice Python e il simulatore mms. Il simulatore comunica con il robot tramite un protocollo testuale su stdin/stdout: ogni comando è una stringa di testo, e ogni risposta è una riga letta dallo standard input.
+Ogni run è governato da una **macchina a stati a tre fasi** in `main.py`:
 
-Questo modulo espone funzioni di alto livello come `move_forward()`, `turn_left()`, `wall_front()`, nascondendo completamente il protocollo di comunicazione sottostante. Il resto del codice non sa — e non deve sapere — che sotto c'è uno scambio di stringhe su stdin/stdout. Questo è un esempio classico del pattern architetturale **Adapter**: trasforma un'interfaccia incompatibile (il protocollo testuale del simulatore) in un'interfaccia utilizzabile dal resto del sistema.
+- **Fase 1 — Esplorazione**: il robot naviga da (0,0) al centro (7,7) scoprendo muri in tempo reale. Il percorso non è ottimo: è il primo percorso praticabile in condizioni di incertezza.
+- **Fase 2 — Ritorno**: il goal viene invertito a (0,0). Il robot torna all'origine percorrendo zone diverse, accumulando ulteriore conoscenza del labirinto.
+- **Fase 3 — Speed Run**: con la mappa parzialmente costruita, il sistema calcola il percorso più corto tra le sole celle visitate (`visited_only=True`) ed lo esegue senza sensing.
 
-## Il Livello di Stato — `maze.py` e `robot.py`
-
-### MazeMap — la rappresentazione del labirinto
-
-`maze.py` implementa la rappresentazione interna del labirinto tramite una struttura dati a **bitmask**. Ogni cella è rappresentata da un intero a 4 bit, dove ogni bit codifica la presenza o assenza di un muro in una delle quattro direzioni cardinali (Nord, Sud, Est, Ovest). Questa scelta è efficiente in termini di memoria e permette operazioni sui muri tramite semplici operazioni bitwise.
-
-La mappa viene inizializzata senza alcun muro conosciuto, e viene aggiornata incrementalmente ogni volta che il robot rileva un nuovo ostacolo tramite i sensori. `MazeMap` espone anche il metodo `get_shortest_path()`, usato nella fase 3 per calcolare il percorso ottimo sulle celle visitate.
-
-### RobotState — lo stato del robot
-
-`robot.py` mantiene lo stato completo del robot in ogni istante: posizione corrente `(x, y)`, direzione di orientamento (Nord, Sud, Est, Ovest), numero di mosse effettuate, numero di svolte, e insieme delle celle visitate. Espone il metodo `snapshot()` che cattura un'istantanea dello stato corrente, usato dal sistema di metriche per calcolare i delta tra una fase e l'altra.
-
-## Il Livello Algoritmi
-
-I due algoritmi di navigazione — `flood_fill.py` e `incremental_astar.py` — condividono la stessa interfaccia: entrambi espongono un metodo `run()` che esegue la navigazione fino al raggiungimento del goal, e un metodo `run_fast()` usato nella fase 3 per eseguire un percorso pre-calcolato senza sensing. Questa interfaccia comune permette a `main.py` di selezionare l'algoritmo tramite un semplice parametro da riga di comando, senza modificare il resto del codice.
-
-Il funzionamento dettagliato dei due algoritmi è descritto nella sezione successiva.
-
-## Il Livello di Valutazione
-
-Il sistema di valutazione è composto da tre moduli:
-
-`metrics.py` definisce le strutture dati `PhaseMetrics` e `RunMetrics`. Ogni run produce un oggetto `RunMetrics` che aggrega le metriche delle tre fasi (mosse, svolte, celle visitate, muri scoperti, replan count, tempo). I risultati vengono serializzati in formato JSON nella cartella `logs/`.
-
-`benchmark.py` automatizza l'esecuzione di run multipli su diversi labirinti e configurazioni, raccogliendo i dati necessari per l'analisi statistica.
-
-`plotting.py` genera i grafici di confronto tra i due algoritmi utilizzando matplotlib.
-
-## La Macchina a Stati a Tre Fasi — `main.py`
-
-`main.py` è il punto di ingresso del sistema e implementa la **macchina a stati a tre fasi** che governa l'esecuzione di ogni run. Le tre fasi sono:
-
-**Fase 1 — Esplorazione:** il robot parte da (0,0) con goal impostato al centro (7,7). L'algoritmo guida il robot verso il goal scoprendo muri e aggiornando la mappa in tempo reale. Il percorso non è ottimo: è il primo percorso praticabile trovato in condizioni di incertezza.
-
-**Fase 2 — Ritorno:** il goal viene invertito a (0,0). Il robot torna all'origine seguendo un percorso diverso da quello dell'andata — diverso perché la mappa è ora più completa e perché l'algoritmo tende a esplorare zone non ancora visitate. Questa fase accumula ulteriore conoscenza del labirinto.
-
-**Fase 3 — Speed Run:** con la mappa costruita nelle fasi precedenti, il sistema calcola il percorso più corto tra le celle visitate tramite `get_shortest_path(visited_only=True)` e lo esegue senza sensing. È il percorso ottimo tra le celle conosciute — non necessariamente quello ottimo assoluto, qualora esistano percorsi più brevi attraverso zone non esplorate.
-
-# Algoritmi di Navigazione {#sec-algoritmi}
+# Algoritmi di Navigazione
 
 ## Flood Fill
 
-### Principio di Funzionamento
-
-Il Flood Fill è un algoritmo di navigazione basato sulla propagazione delle distanze tramite visita in ampiezza (BFS, *Breadth-First Search*). Il nome deriva dall'analogia con il riempimento di un bacino d'acqua: immaginando di versare acqua nelle celle goal del labirinto, l'acqua si espande in tutte le direzioni libere (non bloccate da muri), raggiungendo ogni cella raggiungibile in un numero di passi proporzionale alla sua distanza dal goal.
-
-Formalmente, il Flood Fill assegna a ogni cella $(x, y)$ un valore $d(x,y)$ che rappresenta la distanza minima dal goal nella mappa **attualmente conosciuta**. Le celle goal hanno $d = 0$, le celle adiacenti al goal (senza muri tra loro) hanno $d = 1$, e così via. Il robot si muove sempre verso la cella adiacente con $d$ minore, seguendo il gradiente decrescente delle distanze fino al goal.
-
-### Il Ciclo di Esecuzione
-
-Ad ogni passo il robot esegue le seguenti operazioni in sequenza:
-
-1. **Controllo goal**: se la posizione corrente è una cella goal, la navigazione termina con successo.
-2. **Sensing**: i sensori rilevano la presenza o assenza di muri nelle quattro direzioni cardinali attorno alla cella corrente. Se viene scoperto un muro non ancora registrato nella mappa interna, l'informazione viene aggiornata.
-3. **Re-flood**: se è stata acquisita nuova informazione sui muri, le distanze vengono ricalcolate sull'intera griglia tramite BFS a partire dalle celle goal. Questo garantisce che il gradiente delle distanze sia sempre coerente con la mappa attualmente conosciuta.
-4. **Selezione della prossima cella**: tra i vicini aperti (senza muro tra il robot e il vicino) si sceglie quello con distanza minore. In caso di parità, si preferisce la cella meno visitata in precedenza, favorendo l'esplorazione di zone nuove.
-5. **Movimento**: il robot si orienta nella direzione della cella scelta ed esegue il movimento.
-
-### La Propagazione BFS
-
-Il cuore dell'algoritmo è il metodo `_flood_from_goal()`, che implementa la propagazione BFS delle distanze. L'algoritmo inizializza tutte le distanze a infinito ($d = 9999$), imposta $d = 0$ per tutte le celle goal, e le inserisce in una coda. A ogni iterazione estrae una cella dalla coda, e per ogni vicino aperto con distanza ancora infinita imposta $d_{vicino} = d_{corrente} + 1$ e lo aggiunge alla coda. Il processo termina quando la coda è vuota.
-
-La complessità temporale del re-flood è $O(W \times H)$, dove $W = H = 16$, ovvero al più 256 operazioni per ogni nuovo muro scoperto. In pratica, l'algoritmo è estremamente veloce su una griglia di questa dimensione.
-
-### Fase 3: Speed Run con Visited-Only Flood
-
-Per la fase 3, il Flood Fill utilizza una variante del flood chiamata `_flood_visited_only()`: la propagazione BFS viene eseguita considerando come passabili **solo le celle già visitate** nelle fasi 1 e 2. Le celle non visitate vengono trattate come muri, garantendo che il percorso ottimo calcolato non attraversi mai zone sconosciute. Questo approccio è più conservativo ma elimina il rischio di pianificare un percorso che passa per una zona inesplorata in cui potrebbero esserci muri ignoti.
-
-### Complessità e Proprietà
-
-| Proprietà | Valore |
-|-----------|--------|
-| Completezza | Garantita: trova sempre il goal se esiste un percorso |
-| Ottimalità (fase 3) | Ottimo tra le celle visitate |
-| Complessità temporale per re-flood | $O(W \times H)$ |
-| Complessità spaziale | $O(W \times H)$ per la mappa delle distanze |
-| Complessità totale (esplorazione completa) | $O(N^2)$ con $N = 16$ |
-
----
+Il Flood Fill assegna a ogni cella $(x,y)$ una distanza $d(x,y)$ dal goal tramite BFS. Il robot segue sempre la cella adiacente con $d$ minore. Quando viene scoperto un nuovo muro, tutte le distanze vengono ricalcolate sull'intera griglia — $O(W \times H)$ operazioni, con $W = H = 16$. L'algoritmo è **reattivo**: non mantiene un percorso esplicito ma segue localmente il gradiente. È completo (trova sempre il goal se esiste) e deterministico, caratteristiche che lo rendono particolarmente adatto alle competizioni reali.
 
 ## Incremental A*
 
-### Principio di Funzionamento
+L'Incremental A* pianifica un percorso esplicito minimizzando $f(x,y) = g(x,y) + h(x,y)$, dove $g$ è il costo percorso finora e $h$ è la distanza di Manhattan al goal. L'euristica è **ammissibile** (non sovrastima mai) e **consistente** (monotona), garantendo ottimalità con peso $w=1$. La componente incrementale consente di validare il percorso corrente ad ogni nuovo muro e ricalcolare solo la porzione invalidata, invece di ripartire da zero. La ricerca utilizza un min-heap binario con complessità $O(k \log k)$ per replan, dove $k \ll 256$ è la regione invalidata.
 
-L'Incremental A* è un algoritmo di pianificazione euristica online ispirato a tecniche di replanning incrementale come **LPA\*** (*Lifelong Planning A\**) e **D\* Lite**. A differenza del Flood Fill, che tratta tutte le direzioni in modo uniforme, l'A* utilizza una **funzione euristica** per stimare il costo residuo verso il goal e concentrare la ricerca nelle direzioni più promettenti.
-
-Per ogni cella $(x, y)$ l'algoritmo mantiene tre valori:
-
-- $g(x,y)$: il costo effettivo del percorso trovato finora dall'origine a $(x,y)$
-- $h(x,y)$: la stima euristica del costo da $(x,y)$ al goal — nel progetto si usa la **distanza di Manhattan**: $h(x,y) = |x - x_{goal}| + |y - y_{goal}|$
-- $f(x,y) = g(x,y) + h(x,y)$: il costo totale stimato del percorso passante per $(x,y)$
-
-L'algoritmo espande sempre la cella con $f$ minore, privilegiando le celle che sembrano appartenere al percorso più corto complessivo verso il goal.
-
-### Proprietà dell'Euristica
-
-La distanza di Manhattan è stata scelta perché soddisfa due proprietà fondamentali per garantire la correttezza dell'A*:
-
-**Ammissibilità**: l'euristica non sovrastima mai il costo reale. Poiché ogni mossa costa esattamente 1 e il robot non può muoversi in diagonale, la distanza di Manhattan è il numero minimo teorico di mosse necessarie per raggiungere il goal — e il costo reale non può essere inferiore.
-
-**Consistenza (monotonicità)**: per ogni coppia di celle adiacenti $(n, n')$ vale $h(n) \leq cost(n, n') + h(n')$, ovvero l'euristica non "aumenta" più del costo reale dello spostamento. Questa proprietà garantisce che ogni cella venga espansa al più una volta, rendendo l'algoritmo più efficiente.
-
-L'implementazione supporta anche la modalità **Weighted A\***: moltiplicando l'euristica per un peso $w > 1$ (parametro `--weight` da riga di comando), l'algoritmo diventa più veloce ma perde la garanzia di ottimalità, trovando percorsi al più $w$ volte peggiori dell'ottimo. Con $w = 1$ si ottiene lo standard A*.
-
-### Il Ciclo di Esecuzione
-
-Il ciclo di esecuzione dell'Incremental A* è strutturato come segue:
-
-1. **Pianificazione iniziale**: prima di muoversi, l'algoritmo esegue una ricerca A* completa dalla posizione di partenza al goal sulla mappa attualmente conosciuta (inizialmente vuota di muri) e memorizza il percorso pianificato in `current_path`.
-2. **Controllo goal**: se la posizione corrente è una cella goal, la navigazione termina.
-3. **Sensing**: come nel Flood Fill, i sensori rilevano i muri nella cella corrente e aggiornano la mappa.
-4. **Validazione del percorso**: se è stata scoperta nuova informazione, il metodo `_path_is_valid()` verifica che tutti i passi del percorso pianificato siano ancora percorribili con la mappa aggiornata. Se il percorso è stato invalidato da un nuovo muro, viene eseguito un **replan**.
-5. **Replan incrementale**: il metodo `_replan()` esegue una nuova ricerca A* dalla posizione corrente. Solo la porzione di percorso invalidata viene effettivamente ricalcolata — il robot non riparte da zero, ma da dove si trova in quel momento.
-6. **Movimento**: il robot si muove verso la prima cella del percorso pianificato.
-
-### La Ricerca A*
-
-Il metodo `_astar()` implementa la ricerca A* tramite un **min-heap binario** (coda di priorità), che garantisce l'estrazione della cella con $f$ minore in tempo $O(\log k)$ dove $k$ è la dimensione della coda. Per ogni cella estratta dalla coda, l'algoritmo espande i vicini aperti, aggiornando i costi $g$ e $f$ se viene trovato un percorso migliore. Quando viene estratta una cella goal, il percorso viene ricostruito risalendo la catena di puntatori `parent` da goal a start.
-
-La complessità della singola ricerca A* è $O(W \times H \cdot \log(W \times H))$ nel caso peggiore, migliore del Flood Fill in termini di celle espanse grazie alla guida euristica.
-
-### Complessità e Proprietà
-
-| Proprietà | Valore |
-|-----------|--------|
-| Completezza | Garantita con $w = 1$ |
-| Ottimalità (con $w = 1$) | Ottimo tra le celle visitate in fase 3 |
-| Complessità per singola ricerca A* | $O(W \times H \cdot \log(W \times H))$ |
-| Complessità per replan | $O(k \log k)$, con $k \ll W \times H$ |
-| Complessità spaziale | $O(W \times H)$ per $g$, $f$, e la coda |
-
----
-
-## Confronto tra i Due Algoritmi
-
-I due algoritmi differiscono sostanzialmente nella filosofia di navigazione:
-
-Il **Flood Fill** è **reattivo**: non pianifica un percorso esplicito, ma segue localmente il gradiente delle distanze. È estremamente robusto perché il gradiente è sempre definito su tutta la griglia, e il robot ha sempre una direzione da seguire anche in presenza di vicoli ciechi.
-
-L'**Incremental A\*** è **deliberativo**: mantiene un percorso esplicito pianificato e lo segue finché rimane valido. Questo gli permette di essere più efficiente su labirinti con lunghi corridoi diretti verso il goal, ma lo rende più vulnerabile in labirinti con molti vicoli ciechi, dove il percorso pianificato viene frequentemente invalidato e ricalcolato.
+## Confronto
 
 | | Flood Fill | Incremental A* |
 |---|---|---|
-| Approccio | Reattivo (gradiente locale) | Deliberativo (percorso esplicito) |
-| Euristica | Nessuna | Distanza di Manhattan |
-| Reazione a nuovo muro | Ricalcola tutto il gradiente | Ricalcola solo il percorso invalidato |
-| Struttura dati principale | Coda BFS | Min-heap (coda di priorità) |
+| Approccio | Reattivo (gradiente) | Deliberativo (percorso esplicito) |
+| Reazione a nuovo muro | Ricalcola tutto: $O(W \times H)$ | Ricalcola solo parte: $O(k \log k)$ |
 | Celle visitate (media) | 165 | 122 |
 | Mosse totali (media) | 291 | 213 |
-| Affidabilità | 10/11 run (91%) | 32/36 run (89%) |
-| Complessità implementativa | Bassa | Alta |
-| Caso d'uso ideale | Labirinti con vicoli ciechi, gare | Labirinti aperti, ambienti più grandi |
+| Affidabilità | 10/11 (91%) | 32/36 (89%) |
+| Caso d'uso ideale | Vicoli ciechi, gare | Labirinti aperti |
 
 ## Visualizzazione nel Simulatore
 
-Il simulatore mms fornisce un display grafico in tempo reale che colora le celle del labirinto in modo diverso a seconda della fase e dell'algoritmo in esecuzione. I colori non sono puramente estetici: riflettono direttamente il **ragionamento interno** dell'algoritmo, rendendo possibile osservare in tempo reale come il robot costruisce la mappa e pianifica il percorso.
+Il simulatore mms aggiorna i colori delle celle in tempo reale, riflettendo il ragionamento interno dell'algoritmo ad ogni passo.
 
-### Colori Comuni a Entrambi gli Algoritmi
+**Comuni a entrambi gli algoritmi:**
 
-All'avvio di ogni run, indipendentemente dall'algoritmo scelto:
+| Fase | Colore | Significato |
+|------|--------|-------------|
+| Avvio | Giallo | Cella di partenza (0,0) — "S" |
+| Avvio | Verde | Celle goal al centro — "G" |
+| Pre-Fase 3 | Ciano | Celle visitate nelle Fasi 1 e 2 |
+| Pre-Fase 3 | Nero | Celle inesplorate — "?" |
+| Fase 3 | Verde brillante | Percorso ottimo con numero del passo |
+
+**Flood Fill** — il numero in ogni cella è la distanza $d(x,y)$ dal goal:
+
+| Colore | Distanza $d$ |
+|--------|-------------|
+| Verde | $d = 0$ — celle goal |
+| Giallo | $1 \leq d \leq 4$ |
+| Ciano | $5 \leq d \leq 14$ |
+| Blu | $d \geq 15$ |
+| Bianco | $d = \infty$ — cella irraggiungibile |
+
+**Incremental A\*** — il numero in ogni cella è il valore $f = g + h$:
 
 | Colore | Significato |
 |--------|-------------|
-| 🟡 Giallo | Cella di partenza (0,0), etichettata "S" |
-| 🟢 Verde | Celle goal al centro del labirinto, etichettate "G" |
-
-Prima della Fase 3, il simulatore esegue un'animazione di copertura che mostra quali zone del labirinto sono state esplorate nelle fasi precedenti:
-
-| Colore | Significato |
-|--------|-------------|
-| 🔵 Ciano | Celle visitate durante le Fasi 1 e 2 |
-| ⬛ Nero | Celle mai visitate, etichettate "?" |
-
-Durante la Fase 3 (speed run), il percorso ottimo viene evidenziato:
-
-| Colore | Significato |
-|--------|-------------|
-| 🟢 Verde brillante | Percorso ottimo calcolato, con numero del passo |
-| 🔵 Ciano scuro | Sfondo delle celle visitate |
-
-### Colori del Flood Fill
-
-Durante le Fasi 1 e 2, il Flood Fill aggiorna i colori ad ogni re-flood, mostrando il gradiente delle distanze dal goal. Il numero visualizzato in ogni cella è il valore $d(x,y)$ — la distanza stimata dal goal nella mappa attualmente conosciuta.
-
-| Colore | Distanza $d$ | Significato |
-|--------|-------------|-------------|
-| 🟢 Verde | $d = 0$ | Celle goal |
-| 🟡 Giallo | $1 \leq d \leq 4$ | Celle molto vicine al goal |
-| 🔵 Ciano | $5 \leq d \leq 14$ | Celle a distanza media |
-| 🔵 Blu | $d \geq 15$ | Celle lontane dal goal |
-| ⬜ Bianco | $d = \infty$ | Cella irraggiungibile con la mappa attuale |
-
-Il gradiente cromatico permette di osservare visivamente come le distanze si propagano dal centro verso i bordi del labirinto, e come cambiano ad ogni nuovo muro scoperto.
-
-### Colori dell'Incremental A*
-
-Durante le Fasi 1 e 2, l'Incremental A* aggiorna i colori ad ogni replan, mostrando i valori $f = g + h$ calcolati dalla ricerca. Il numero in ogni cella è il valore $f(x,y)$ — il costo totale stimato del percorso passante per quella cella.
-
-| Colore | Significato |
-|--------|-------------|
-| 🟢 Verde | Celle goal |
-| 🔵 Ciano | Celle già visitate fisicamente dal robot |
-| 🟡 Giallo | Celle nella frontiera di ricerca (valutate ma non ancora visitate) |
-| ⬛ Nero | Celle con $f = \infty$, non ancora raggiungibili dalla ricerca |
-
-A differenza del Flood Fill, i colori dell'A* non mostrano un gradiente uniforme sull'intera griglia, ma solo le celle effettivamente esplorate dalla ricerca — evidenziando come l'euristica concentri l'esplorazione nelle direzioni più promettenti verso il goal.
+| Verde | Celle goal |
+| Ciano | Celle già visitate fisicamente |
+| Giallo | Frontiera di ricerca |
+| Nero | $f = \infty$ — non ancora raggiunte |
 
 # Risultati Sperimentali
 
