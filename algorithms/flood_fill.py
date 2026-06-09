@@ -411,7 +411,7 @@ class FloodFill:
                         api.set_color(cell.x, cell.y, "B")
                 else:
                     api.set_text(cell.x, cell.y, "?")
-                    api.set_color(cell.x, cell.y, "W")
+                    api.set_color(cell.x, cell.y, "r")
 
     def _color_goal_path(self) -> None:
         """
