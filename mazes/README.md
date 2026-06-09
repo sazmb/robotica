@@ -1,6 +1,6 @@
 # Maze Files
 
-Place custom `.maz` maze files in this directory.
+Place custom `.maz`or `.txt` maze files in this directory.
 
 ## Format
 
@@ -12,13 +12,17 @@ for the exact format specification.
 
 ## Example Mazes
 
-- `simple.maz` — A basic 16×16 maze for initial testing
-- `dead_ends.maz` — Heavy dead-end maze to stress-test backtracking
-- `open_field.maz` — Sparse walls to test heuristic efficiency
-- `competition.maz` — Sample competition-style maze
+This directory contains various `.txt` files representing mazes of different typologies:
+- `competition` — Sample competition-style mazes
+- `dead_end` — Heavy dead-end mazes to stress-test backtracking
+- `multiple_path` — Mazes with multiple paths to the goal
+- `open_area` — Sparse walls to test heuristic efficiency
+- `symmetric` — Symmetric mazes
+
+Refer to `names.txt` for a complete list of all maze files and their corresponding typologies.
 
 To use a custom maze in the simulator:
 1. Launch the mms simulator
 2. Go to **File → Open Maze**
-3. Select your `.maz` file
+3. Select your maze file
 4. Click **Run** to start the algorithm
