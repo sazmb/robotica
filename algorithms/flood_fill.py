@@ -375,24 +375,24 @@ class FloodFill:
             return None
 
         # VERSIONE SENZA PENALITA' DI VISITA
-        # def score(pos: tuple[int, int]) -> tuple[int, int]:
-        #     nx, ny = pos
-        #     cell = self.maze.cells[nx][ny]
-        #     visit_penalty = self.robot.visit_count(nx, ny)  # prefer unvisited
-        #     return (cell.distance, visit_penalty)
-        
-        # VERSIONE CON PENALITA' DI VISITA (da testare)
-        def score(pos):
+        def score(pos: tuple[int, int]) -> tuple[int, int]:
             nx, ny = pos
             cell = self.maze.cells[nx][ny]
-            if self.exploration_mode:
-                return (
-                    cell.distance + min(6, 2 * self.robot.visit_count(nx, ny))
-                )
-            return (
-                cell.distance,
-                self.robot.visit_count(nx, ny)
-            )
+            visit_penalty = self.robot.visit_count(nx, ny)  # prefer unvisited
+            return (cell.distance, visit_penalty)
+        
+        # VERSIONE CON PENALITA' DI VISITA (da testare)
+        # def score(pos):
+        #     nx, ny = pos
+        #     cell = self.maze.cells[nx][ny]
+        #     if self.exploration_mode:
+        #         return (
+        #             cell.distance + min(6, 2 * self.robot.visit_count(nx, ny))
+        #         )
+        #     return (
+        #         cell.distance,
+        #         self.robot.visit_count(nx, ny)
+        #     )
 
         best = min(neighbours, key=score)
         best_dist = self.maze.cells[best[0]][best[1]].distance
