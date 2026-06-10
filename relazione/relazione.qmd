@@ -4,8 +4,7 @@ subtitle: "Confronto tra Flood Fill e Incremental A*"
 lang: it
 format:
   pdf:
-    toc: true
-    toc-title: "Indice"
+    toc: false
     number-sections: true
     colorlinks: true
     linkcolor: black
@@ -48,7 +47,7 @@ import matplotlib.image as mpimg
 from pathlib import Path
 
 # Percorsi ai file di log (relativi a questo .qmd)
-LOGS_DIR = Path("../logs")
+LOGS_DIR = Path("../logs_v2")
 PLOTS_DIR = LOGS_DIR / "plots"
 
 with open(LOGS_DIR / "floodfill_results.json") as f:
@@ -189,7 +188,7 @@ summary = pd.DataFrame({
     ],
 })
 
-summary.to_markdown(index=False)
+summary
 ```
 
 ```{python}

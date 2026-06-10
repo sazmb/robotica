@@ -85,7 +85,7 @@ class MazePlotter:
     def __init__(
         self,
         collector: MetricsCollector,
-        output_dir: str | Path = "logs/plots",
+        output_dir: str | Path = "logs_v2/plots",
         dpi: int = 150,
     ) -> None:
         """
@@ -605,7 +605,7 @@ class MazePlotter:
 
 def plot_from_json(
     *json_paths: str | Path,
-    output_dir: str | Path = "logs/plots",
+    output_dir: str | Path = "logs_v2/plots",
 ) -> None:
     """
     Load JSON benchmark files and generate all plots.
