@@ -202,12 +202,24 @@ python analyse_results.py --logs-dir custom_logs --output-dir my_results
 ### Generating Plots
 
 ```python
+# Versione 1
 from evaluation.plotting import plot_from_json
 
 plot_from_json(
     "logs/floodfill_results.json",
     "logs/incrementalastar_results.json",
     output_dir="logs/plots",
+)
+
+# Confronto versioni
+from evaluation.variant_comparison import plot_variant_comparison
+
+plot_variant_comparison(
+    floodfill_base="logs/floodfill_results.json",
+    floodfill_penalized="logs_v2/floodfill_results.json",
+    astar_base="logs/incrementalastar_results.json",
+    astar_penalized="logs_v2/incrementalastar_results.json",
+    output_dir="logs/variant_plots"
 )
 ```
 
