@@ -47,14 +47,14 @@ ALGO_COLORS = {
 }
 
 DEFAULT_STYLE = {
-    "figure.facecolor": "white",
-    "axes.facecolor": "white",
-    "axes.edgecolor": "black",
-    "axes.labelcolor": "black",
-    "text.color": "black",
-    "xtick.color": "black",
-    "ytick.color": "black",
-    "grid.color": "#D0D0D0",
+    "figure.facecolor": "#1A1A2E",
+    "axes.facecolor": "#16213E",
+    "axes.edgecolor": "#E0E0E0",
+    "axes.labelcolor": "#E0E0E0",
+    "text.color": "#E0E0E0",
+    "xtick.color": "#E0E0E0",
+    "ytick.color": "#E0E0E0",
+    "grid.color": "#2A2A4A",
     "grid.linestyle": "--",
     "grid.alpha": 0.5,
 }
@@ -126,29 +126,16 @@ class MazePlotter:
 
         if metrics is None:
             metrics = [
-                "total_moves",
-                "total_turns",
-                "visited_cells",
-                "final_path_length",
+                "total_moves", "total_turns",
+                "visited_cells", "final_path_length",
                 "replan_count",
-                "elapsed_seconds",
             ]
 
         algos = self.collector.algorithms()
         n_metrics = len(metrics)
         n_algos = len(algos)
 
-        n_cols = 3
-        n_rows = int(np.ceil(n_metrics / n_cols))
-
-        fig, axes = plt.subplots(
-            n_rows,
-            n_cols,
-            figsize=(12, 7)
-        )
-
-        axes = np.array(axes).flatten()
-
+        fig, axes = plt.subplots(1, n_metrics, figsize=(4 * n_metrics, 6))
         fig.suptitle(
             "Algorithm Performance Comparison",
             fontsize=16, fontweight="bold", y=1.02,
@@ -174,9 +161,7 @@ class MazePlotter:
             bars = ax.bar(x, means, yerr=stds, capsize=5,
                           color=colors, alpha=0.85, edgecolor="white", linewidth=0.8)
 
-            ax.margins(x=0.20)
-
-            ax.set_title(metric.replace("_", " ").title(), fontsize=11, pad=10, fontweight="bold")
+            ax.set_title(metric.replace("_", " ").title(), fontsize=11, pad=10)
             ax.set_xticks(x)
             ax.set_xticklabels(labels, rotation=15, ha="right", fontsize=9)
             ax.set_ylabel("Value", fontsize=10)
@@ -185,22 +170,12 @@ class MazePlotter:
 
             # Value labels on bars
             for bar, mean, std in zip(bars, means, stds):
-                ax.annotate(
-                    f"{mean:.0f}",
-                    xy=(
-                        bar.get_x() + bar.get_width()/2,
-                        bar.get_height()
-                    ),
-                    xytext=(4, 4),
-                    textcoords="offset points",
-                    fontsize=7,
-                    color="black",
-                    ha="left",
-                    va="bottom"
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    bar.get_height() + std + 0.5,
+                    f"{mean:.1f}",
+                    ha="center", va="bottom", fontsize=8, color="white"
                 )
-
-        for ax in axes[len(metrics):]:
-            ax.axis("off")
 
         plt.tight_layout()
         output_path = self.output_dir / filename
@@ -304,7 +279,9 @@ class MazePlotter:
 
         im = ax.imshow(grid, cmap="plasma", interpolation="nearest", aspect="equal")
         cbar = fig.colorbar(im, ax=ax, shrink=0.8)
-        cbar.set_label("Visit Count")
+        cbar.set_label("Visit Count", color="#E0E0E0")
+        cbar.ax.yaxis.set_tick_params(color="#E0E0E0")
+        plt.setp(plt.getp(cbar.ax.axes, "yticklabels"), color="#E0E0E0")
 
         ax.set_xlabel("X (column)", fontsize=10)
         ax.set_ylabel("Y (row, flipped)", fontsize=10)
@@ -549,20 +526,12 @@ class MazePlotter:
                 color=ALGO_COLORS.get(algo, "#AAAAAA"),
                 alpha=0.85, edgecolor="white", linewidth=0.7,
             )
-
             for bar, mean in zip(bars, means):
-                ax.annotate(
+                ax.text(
+                    bar.get_x() + bar.get_width() / 2,
+                    bar.get_height() + 0.5,
                     f"{mean:.0f}",
-                    xy=(
-                        bar.get_x() + bar.get_width()/2,
-                        bar.get_height()
-                    ),
-                    xytext=(4, 4),
-                    textcoords="offset points",
-                    fontsize=7,
-                    color="black",
-                    ha="left",
-                    va="bottom"
+                    ha="center", va="bottom", fontsize=7, color="white",
                 )
 
         ax.set_xticks(x)
@@ -603,6 +572,8 @@ class MazePlotter:
         """
         paths: list[Path] = []
         paths.append(self.plot_comparison_bars())
+        paths.append(self.plot_runtime_comparison())
+        paths.append(self.plot_efficiency_scatter())
 
         # Typology comparison — only generate when multiple typologies present
         all_typologies = sorted(
