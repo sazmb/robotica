@@ -136,101 +136,21 @@ Il simulatore mms aggiorna i colori delle celle in tempo reale, riflettendo il r
 | Giallo | Frontiera di ricerca |
 | Nero | $f = \infty$ — non ancora raggiunte |
 
-# Risultati Sperimentali
+# Risultati Sperimentali {#sec-risultati}
 
-```{python}
-# Statistiche riassuntive dai dati reali
-ff_runs = len(ff_data)
-astar_runs = len(astar_data)
+Il benchmark è stato condotto su 40 run totali (20 per algoritmo) distribuiti su 5 tipologie di labirinto: competition, dead_end, multiple_path, open_area e symmetric. Entrambi gli algoritmi hanno raggiunto il goal nel 100% dei run, dimostrando robustezza completa su tutte le configurazioni testate.
 
-ff_success = sum(1 for r in ff_data if r.get("goal_reached", False))
-astar_success = sum(1 for r in astar_data if r.get("goal_reached", False))
-
-ff_moves = [r["total_moves"] for r in ff_data if "total_moves" in r]
-astar_moves = [r["total_moves"] for r in astar_data if "total_moves" in r]
-
-ff_cells = [r["visited_cells"] for r in ff_data if "visited_cells" in r]
-astar_cells = [r["visited_cells"] for r in astar_data if "visited_cells" in r]
-
-ff_time = [r["elapsed_seconds"] for r in ff_data if "elapsed_seconds" in r]
-astar_time = [r["elapsed_seconds"] for r in astar_data if "elapsed_seconds" in r]
-```
-
-## Statistiche Generali
-
-```{python}
-import numpy as np
-
-summary = pd.DataFrame({
-    "Metrica": [
-        "Run totali",
-        "Goal raggiunto",
-        "Mosse totali (media)",
-        "Celle visitate (media)",
-        "Tempo run (media, s)",
-        "Replan count (media)",
-    ],
-    "Flood Fill": [
-        ff_runs,
-        f"{ff_success}/{ff_runs}",
-        f"{np.mean(ff_moves):.1f} ± {np.std(ff_moves):.1f}",
-        f"{np.mean(ff_cells):.1f} ± {np.std(ff_cells):.1f}",
-        f"{np.mean(ff_time):.1f} ± {np.std(ff_time):.1f}",
-        f"{np.mean([r.get('replan_count',0) for r in ff_data]):.1f}",
-    ],
-    "Incremental A*": [
-        astar_runs,
-        f"{astar_success}/{astar_runs}",
-        f"{np.mean(astar_moves):.1f} ± {np.std(astar_moves):.1f}",
-        f"{np.mean(astar_cells):.1f} ± {np.std(astar_cells):.1f}",
-        f"{np.mean(astar_time):.1f} ± {np.std(astar_time):.1f}",
-        f"{np.mean([r.get('replan_count',0) for r in astar_data]):.1f}",
-    ],
-})
-
-summary
-```
-
-```{python}
-#| label: fig-confronto
-#| fig-cap: "Confronto tra i due algoritmi: mosse totali, celle visitate e tempo di esecuzione."
-
-fig, axes = plt.subplots(1, 3, figsize=(12, 4))
-
-metrics = [
-    (ff_moves, astar_moves, "Mosse totali"),
-    (ff_cells, astar_cells, "Celle visitate"),
-    (ff_time,  astar_time,  "Tempo (s)"),
-]
-
-colors = ["#4C72B0", "#DD8452"]
-
-for ax, (ff_vals, astar_vals, label) in zip(axes, metrics):
-    ax.boxplot(
-        [ff_vals, astar_vals],
-        labels=["Flood Fill", "A*"],
-        patch_artist=True,
-        boxprops=dict(facecolor="white"),
-        medianprops=dict(color="black", linewidth=2),
-    )
-    for patch, color in zip(ax.patches, colors):
-        patch.set_facecolor(color)
-        patch.set_alpha(0.6)
-    ax.set_title(label, fontsize=11)
-    ax.grid(axis="y", linestyle="--", alpha=0.5)
-
-plt.tight_layout()
-plt.savefig("confronto_boxplot.png", dpi=150, bbox_inches="tight")
-plt.show()
-```
-
-## Grafici di Analisi
+## Confronto Generale tra gli Algoritmi
 
 ```{python}
 #| label: fig-bars
-#| fig-cap: "Confronto a barre dei principali indicatori di performance."
+#| fig-cap: "Confronto tra Flood Fill e Incremental A* sui principali indicatori di performance."
 
-img = mpimg.imread(str(PLOTS_DIR / "comparison_bars.png"))
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+from pathlib import Path
+
+img = mpimg.imread(str(Path("../logs/plots/comparison_bars.png")))
 plt.figure(figsize=(10, 5))
 plt.imshow(img)
 plt.axis("off")
@@ -238,12 +158,66 @@ plt.tight_layout()
 plt.show()
 ```
 
-```{python}
-#| label: fig-scatter
-#| fig-cap: "Scatter plot efficienza: celle visitate vs mosse totali."
+La @fig-bars mostra il confronto aggregato sui sei indicatori principali. I risultati evidenziano una sostanziale equivalenza tra i due approcci: le mosse totali sono 263 per Flood Fill e 268 per A\*, le celle visitate 143 contro 145, e il percorso finale della speed run praticamente identico (62 vs 63 passi). La differenza più marcata riguarda il **replan count**: il Flood Fill esegue in media 105 replan contro i 68 dell'A\*. Questo è atteso: il Flood Fill ricalcola l'intera griglia ad ogni muro scoperto, mentre l'A\* invalida e ricalcola solo la porzione di percorso interessata. Il tempo di esecuzione è leggermente superiore per Flood Fill (26s vs 25s), coerentemente con il maggior numero di ricalcoli globali.
 
-img = mpimg.imread(str(PLOTS_DIR / "efficiency_scatter.png"))
-plt.figure(figsize=(10, 5))
+## Sensibilità alla Tipologia di Labirinto
+
+```{python}
+#| label: fig-typology
+#| fig-cap: "Heatmap della sensibilità degli algoritmi alle diverse tipologie di labirinto: tempo medio (sinistra) e celle visitate (destra)."
+
+img = mpimg.imread(str(Path("../my_results/typology_sensitivity.png")))
+plt.figure(figsize=(11, 5))
+plt.imshow(img)
+plt.axis("off")
+plt.tight_layout()
+plt.show()
+```
+
+La @fig-typology rivela come le prestazioni varino significativamente tra le tipologie. I labirinti **open_area** sono i più semplici per entrambi (FF: 12.93s, A\*: 13.84s; celle visitate 70 e 76), mentre i labirinti **competition** sono i più onerosi (FF: 32.03s, A\*: 28.86s). La differenza più interessante emerge nei labirinti **multiple_path**: il Flood Fill visita 136 celle contro le 188 dell'A\*, suggerendo che la presenza di percorsi alternativi confonde la pianificazione euristica dell'A\*, che tende a seguire un percorso esplicito e a doverlo ricalcolare più volte quando trova muri su percorsi alternativi. Nei labirinti **dead_end** invece l'A\* è più efficiente (145 celle vs 167), probabilmente perché il replanning locale evita di riesaminare vicoli ciechi già scartati.
+
+## Analisi della Fase 2
+
+```{python}
+#| label: fig-phase2
+#| fig-cap: "Analisi della Fase 2: muri scoperti per fase (sinistra) e Return-Overhead Index (destra)."
+
+img = mpimg.imread(str(Path("../my_results/phase2_efficiency.png")))
+plt.figure(figsize=(11, 5))
+plt.imshow(img)
+plt.axis("off")
+plt.tight_layout()
+plt.show()
+```
+
+La @fig-phase2 analizza l'efficacia della fase di ritorno. Il grafico di sinistra mostra che entrambi gli algoritmi scoprono la maggior parte dei muri in Fase 1 (FF: 78, A\*: 83) e una quota minore in Fase 2 (FF: 27, A\*: 24). Il **Return-Overhead Index** (rapporto tra tempo Fase 2 e tempo Fase 1) è in mediana intorno a 0.7 per entrambi — la fase di ritorno costa circa il 70% del tempo dell'esplorazione iniziale. L'A\* mostra una distribuzione più concentrata e meno variabile, mentre il Flood Fill presenta alcuni outlier con overhead superiore a 1 (casi in cui il ritorno è costato più dell'andata), probabilmente su labirinti con struttura asimmetrica che penalizza maggiormente il percorso inverso.
+
+## Return on Investment dell'Esplorazione
+
+```{python}
+#| label: fig-roi
+#| fig-cap: "Exploration ROI: correlazione tra copertura del labirinto e tempo della speed run."
+
+img = mpimg.imread(str(Path("../my_results/exploration_roi.png")))
+plt.figure(figsize=(10, 6))
+plt.imshow(img)
+plt.axis("off")
+plt.tight_layout()
+plt.show()
+```
+
+La @fig-roi affronta una domanda fondamentale: esplorare più celle garantisce una speed run più veloce? Il grafico mostra sull'asse X il rapporto di copertura (celle visitate / celle totali) e sull'asse Y il tempo della Fase 3. La correlazione positiva è evidente (Pearson $r = 0.705$): più il robot esplora, più la speed run è lunga. Questo risultato è **controintuitivo** a prima vista, ma ha una spiegazione logica: i labirinti più complessi (competition, dead_end) richiedono più esplorazione e producono naturalmente percorsi finali più lunghi, mentre i labirinti semplici (open_area) si esplorano poco e si percorrono in tempi brevi. Non è quindi la copertura a causare percorsi più lunghi, ma la complessità del labirinto a determinare entrambe le variabili. I due algoritmi mostrano linee di tendenza quasi sovrapposte, confermando la loro equivalenza in termini di ROI esplorativo.
+
+# Discussione {#sec-discussione}
+
+## Effetto della Revisit Penalty
+
+```{python}
+#| label: fig-variant-abs
+#| fig-cap: "Effetto assoluto della revisit penalty sulle quattro varianti algoritmiche."
+
+img = mpimg.imread(str(Path("../logs/variant_plots/variant_absolute_comparison.png")))
+plt.figure(figsize=(10, 6))
 plt.imshow(img)
 plt.axis("off")
 plt.tight_layout()
@@ -251,63 +225,61 @@ plt.show()
 ```
 
 ```{python}
-#| label: fig-runtime
-#| fig-cap: "Distribuzione del tempo di esecuzione per algoritmo."
+#| label: fig-variant-pct
+#| fig-cap: "Effetto percentuale della revisit penalty rispetto alla configurazione base."
 
-img = mpimg.imread(str(PLOTS_DIR / "runtime_comparison.png"))
-plt.figure(figsize=(10, 5))
+img = mpimg.imread(str(Path("../logs/variant_plots/variant_effect_percent.png")))
+plt.figure(figsize=(9, 5))
 plt.imshow(img)
 plt.axis("off")
 plt.tight_layout()
 plt.show()
 ```
 
-# Discussione
+Le @fig-variant-abs e @fig-variant-pct analizzano l'impatto della **revisit penalty** — un meccanismo che penalizza le celle già visitate per incentivare l'esplorazione di zone nuove. Le varianti "+" indicano la versione con penalty attiva.
 
-## Efficienza di Esplorazione
+I risultati sono asimmetrici tra i due algoritmi. Per il **Flood Fill**, la penalty riduce le mosse del 9.6% (da 263 a 289) ma aumenta le celle visitate del 9% — il robot evita le celle già visitate ma percorre traiettorie più tortuose verso zone nuove. Il tempo migliora del 3.3%. Per l'**Incremental A\***, l'effetto è molto più contenuto: le mosse si riducono solo dello 0.8% e le celle visitate aumentano del 4%, mentre il tempo peggiora leggermente (+1.7%). Questo suggerisce che l'A\* è già naturalmente portato verso l'esplorazione di nuove celle grazie all'euristica, e la penalty aggiuntiva introduce overhead senza benefici significativi.
+
+## Smoothness Cinematica
 
 ```{python}
-ff_exp = np.mean([r.get("visited_cells", 0) for r in ff_data]) / 256
-astar_exp = np.mean([r.get("visited_cells", 0) for r in astar_data]) / 256
-diff_cells = np.mean(ff_cells) - np.mean(astar_cells)
+#| label: fig-smoothness
+#| fig-cap: "Evoluzione del turn ratio nelle tre fasi: rapporto svolte/comandi totali."
+
+img = mpimg.imread(str(Path("../my_results/kinematic_smoothness.png")))
+plt.figure(figsize=(11, 5))
+plt.imshow(img)
+plt.axis("off")
+plt.tight_layout()
+plt.show()
 ```
 
-L'Incremental A* visita in media **`{python} f"{diff_cells:.0f}"`** celle in meno rispetto al Flood Fill (`{python} f"{astar_exp:.1%}"` vs `{python} f"{ff_exp:.1%}"` del labirinto), grazie alla guida euristica che concentra l'esplorazione nelle direzioni promettenti.
+La @fig-smoothness analizza la **smoothness cinematica** tramite il turn ratio (svolte / comandi totali). Un valore basso indica un percorso più diretto e lineare, più efficiente su hardware reale dove le svolte hanno un costo energetico e temporale superiore alle mosse lineari.
 
-## Affidabilità
+Entrambi gli algoritmi mostrano un pattern analogo nelle tre fasi: turn ratio simile in Fase 1 (FF: 0.288, A\*: 0.302), leggermente più alto in Fase 2 (FF: 0.317, A\*: 0.309), e minimo in Fase 3 (FF: 0.282, A\*: 0.281). L'aumento in Fase 2 è atteso: il ritorno verso l'origine segue un percorso meno diretto rispetto all'esplorazione iniziale, con più cambi di direzione. La Fase 3 produce i percorsi più fluidi perché calcolati sulla mappa più completa disponibile. La quasi identità dei valori tra i due algoritmi in tutte le fasi conferma che, dal punto di vista cinematico, i due approcci producono traiettorie di qualità equivalente.
 
-Il Flood Fill raggiunge il goal nel **`{python} f"{ff_success/ff_runs:.0%}"`** dei run (`{python} ff_success`/`{python} ff_runs`), contro il **`{python} f"{astar_success/astar_runs:.0%}"`** dell'A* (`{python} astar_success`/`{python} astar_runs`). La maggiore complessità dell'A* introduce qualche caso di fallimento in più su labirinti con molti vicoli ciechi.
+## Considerazioni Generali
 
-## Tradeoff Computazionale
+I risultati sperimentali confermano che i due algoritmi sono sostanzialmente equivalenti nelle condizioni testate, con differenze statisticamente modeste sugli indicatori globali. Le divergenze emergono a livello di tipologia di labirinto, suggerendo che la scelta dell'algoritmo ottimale dipende dalla struttura dell'ambiente:
 
-Il Flood Fill ricalcola l'intera griglia ad ogni muro scoperto ($O(256)$ per re-flood), mentre l'A* invalida solo la regione interessata. In pratica, su una griglia 16×16, la differenza di velocità è trascurabile; il vantaggio dell'A* emerge su griglie più grandi.
+- **Labirinti open area e symmetric**: equivalenti, con lieve vantaggio del Flood Fill per minor numero di celle visitate
+- **Labirinti competition**: A\* leggermente migliore in termini di tempo (28.86s vs 32.03s)
+- **Labirinti multiple_path**: Flood Fill nettamente più efficiente (136 vs 188 celle visitate)
+- **Labirinti dead_end**: A\* più efficiente (145 vs 167 celle visitate)
 
-# Conclusioni
+La revisit penalty risulta vantaggiosa solo per il Flood Fill, mentre per l'A\* introduce overhead senza benefici rilevanti.
 
-Entrambi gli algoritmi risolvono con successo il problema Micromouse in ambiente parzialmente osservabile.
+# Conclusioni {#sec-conclusioni}
 
-- Il **Flood Fill** è preferibile in contesti di gara per la sua semplicità, robustezza e comportamento deterministico.
-- L'**Incremental A\*** è più efficiente su labirinti aperti e scala meglio al crescere della dimensione, al costo di una maggiore complessità implementativa.
+Il progetto ha implementato e confrontato con successo due algoritmi di navigazione autonoma per il problema Micromouse in ambiente parzialmente osservabile. Entrambi gli algoritmi raggiungono il goal nel 100% dei run su tutte le tipologie di labirinto testate, dimostrando robustezza e completezza algoritmiche.
 
-Sviluppi futuri includono D* Lite (replanning completo con ricerca inversa), penalità per le svolte, e un generatore automatico di labirinti per testing su larga scala.
+La principale conclusione è che **non esiste un algoritmo universalmente superiore**. Il Flood Fill, nella sua semplicità reattiva, si dimostra sorprendentemente competitivo rispetto all'A\* più sofisticato, e lo supera su labirinti con percorsi multipli. L'Incremental A\* mostra vantaggi su labirinti strutturati (competition) e con vicoli ciechi, dove il replanning locale evita ricalcoli globali inutili. In entrambi i casi, la qualità del percorso finale (speed run) è praticamente identica, indicando che le differenze riguardano principalmente l'efficienza della fase esplorativa e non la qualità della soluzione trovata.
 
-# Appendice — Struttura del Progetto
+L'analisi della revisit penalty mostra come modifiche algoritmiche apparentemente semplici abbiano effetti asimmetrici sui due approcci, aprendo la strada a configurazioni ibride ottimizzate per specifiche tipologie di labirinto.
 
-```
-robotica/
-├── main.py                    # Entry point — macchina a stati 3 fasi
-├── core/
-│   ├── maze.py                # MazeMap (bitmask muri + distanze)
-│   ├── robot.py               # RobotState (posizione, heading, storia)
-│   └── simulator_api.py       # Interfaccia stdin/stdout con mms
-├── algorithms/
-│   ├── flood_fill.py          # Solver Flood Fill
-│   └── incremental_astar.py   # Solver Incremental A*
-├── evaluation/
-│   ├── metrics.py             # RunMetrics + MetricsCollector
-│   ├── benchmark.py           # BenchmarkRunner
-│   └── plotting.py            # MazePlotter (grafici matplotlib)
-├── mazes/                     # 8 labirinti di test (.txt)
-├── logs/                      # Risultati JSON/CSV + grafici
-└── tests/                     # Suite pytest (maze, robot, algoritmi)
-```
+Per sviluppi futuri si individuano le seguenti direzioni:
+
+- **Esplorazione attiva**: implementare strategie che massimizzano deliberatamente la copertura prima della speed run, riducendo l'incertezza sul percorso ottimo
+- **Algoritmi ibridi**: combinare il gradiente globale del Flood Fill con l'euristica dell'A\* per ottenere il meglio di entrambi gli approcci
+- **Scalabilità**: estendere il sistema a griglie 32×32 per valutare come scalano le complessità computazionali, dove il vantaggio del replanning incrementale dell'A\* dovrebbe essere più marcato
+- **Hardware reale**: portare il sistema su un robot Micromouse fisico, aggiungendo la gestione dell'odometria e dell'incertezza dei sensori reali
