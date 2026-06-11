@@ -15,6 +15,9 @@ format:
     include-in-header:
       text: |
         \usepackage{graphicx}
+        \setlength{\abovecaptionskip}{3pt}
+        \setlength{\belowcaptionskip}{0pt}
+        \setlength{\textfloatsep}{8pt}
         \renewcommand{\maketitle}{}
     include-before-body:
       text: |
@@ -221,7 +224,7 @@ La @fig-phase2 analizza l'efficacia della fase di ritorno. Il grafico di sinistr
 #| fig-cap: "Exploration ROI: correlazione tra copertura del labirinto e tempo della speed run."
 
 img = mpimg.imread(str(Path("../my_results/exploration_roi.png")))
-plt.figure(figsize=(8, 4))
+plt.figure(figsize=(8, 3))
 plt.imshow(img)
 plt.axis("off")
 plt.tight_layout()
@@ -236,10 +239,10 @@ La @fig-roi affronta una domanda fondamentale: esplorare più celle garantisce u
 In questa sezione analizziamo l'impatto della revisit penalty.
 
 ```{python}
-#| label: fig-variant-abs
-#| fig-cap: "Effetto assoluto della revisit penalty sulle quattro varianti algoritmiche."
+#| label: fig-variant
+#| fig-cap: "Effetto della revisit penalty rispetto alla configurazione base."
 
-img = mpimg.imread(str(Path("../logs/variant_plots/variant_absolute_comparison.png")))
+img = mpimg.imread(str(Path("../logs/variant_plots/variant_combined.png")))
 plt.figure(figsize=(8, 4))
 plt.imshow(img)
 plt.axis("off")
@@ -247,19 +250,7 @@ plt.tight_layout()
 plt.show()
 ```
 
-```{python}
-#| label: fig-variant-pct
-#| fig-cap: "Effetto percentuale della revisit penalty rispetto alla configurazione base."
-
-img = mpimg.imread(str(Path("../logs/variant_plots/variant_effect_percent.png")))
-plt.figure(figsize=(8, 4))
-plt.imshow(img)
-plt.axis("off")
-plt.tight_layout()
-plt.show()
-```
-
-Le @fig-variant-abs e @fig-variant-pct analizzano l'impatto della **revisit penalty** — un meccanismo che penalizza le celle già visitate per incentivare l'esplorazione di zone nuove. Le varianti "+" indicano la versione con penalty attiva.
+La @fig-variant analizza l'impatto della **revisit penalty** — un meccanismo che penalizza le celle già visitate per incentivare l'esplorazione di zone nuove. Le varianti "+" indicano la versione con penalty attiva.
 
 I risultati sono asimmetrici tra i due algoritmi. Per il **Flood Fill**, la penalty riduce le mosse del 9.6% (da 263 a 289) ma aumenta le celle visitate del 9% — il robot evita le celle già visitate ma percorre traiettorie più tortuose verso zone nuove. Il tempo migliora del 3.3%. Per l'**Incremental A\***, l'effetto è molto più contenuto: le mosse si riducono solo dello 0.8% e le celle visitate aumentano del 4%, mentre il tempo peggiora leggermente (+1.7%). Questo suggerisce che l'A\* è già naturalmente portato verso l'esplorazione di nuove celle grazie all'euristica, e la penalty aggiuntiva introduce overhead senza benefici significativi.
 

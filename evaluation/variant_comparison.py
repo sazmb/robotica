@@ -1,13 +1,9 @@
-from __future__ import annotations
-
-import json
 from pathlib import Path
-
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 
 from evaluation.metrics import RunMetrics
-from matplotlib.lines import Line2D
 
 
 ALGO_COLORS = {
@@ -17,35 +13,21 @@ ALGO_COLORS = {
     "IncrementalAStar+": "#F4A07A",
 }
 
-ALG_PALETTE = {
-    'FloodFill': '#4A90D9',
-    'IncrementalAStar': '#E87040',
-}
-
 
 def load_runs(path):
+    import json
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
-
     return [RunMetrics.from_dict(d) for d in data]
 
 
 def metric_mean(runs, metric):
-
-    values = []
-
-    for r in runs:
-        if hasattr(r, metric):
-
-            v = getattr(r, metric)
-
-            if v is not None:
-                values.append(v)
-
-    if not values:
-        return np.nan
-
-    return float(np.mean(values))
+    values = [
+        getattr(r, metric)
+        for r in runs
+        if hasattr(r, metric) and getattr(r, metric) is not None
+    ]
+    return float(np.mean(values)) if values else np.nan
 
 
 def plot_variant_comparison(
@@ -67,252 +49,93 @@ def plot_variant_comparison(
     }
 
     metrics = {
-        "total_moves": "Total Moves",
+        "total_moves": "Moves",
         "visited_cells": "Visited Cells",
-        "elapsed_seconds": "Elapsed Time (s)",
-        "replan_count": "Replan Count",
+        "elapsed_seconds": "Time (s)",
     }
 
-    # =====================================================
-    # FIGURA 1
-    # =====================================================
+    label_map = {
+        "FloodFill": "Flood Fill",
+        "FloodFill+": "Flood Fill+",
+        "IncrementalAStar": "Incremental A*",
+        "IncrementalAStar+": "Incremental A*+",
+    }
 
-    fig, axes = plt.subplots(
-        2,
-        2,
-        figsize=(12, 8)
-    )
+    algos = list(datasets.keys())
+    x = np.arange(len(metrics))
+    width = 0.18
 
-    axes = axes.flatten()
+    fig, ax = plt.subplots(figsize=(11, 5))
 
     fig.suptitle(
-        "Effect of Revisit Penalty — Absolute Performance",
-        fontsize=16,
-        fontweight="bold"
-    )
-
-    for ax, (metric, title) in zip(axes, metrics.items()):
-
-        label_map = {
-            "FloodFill": "Flood Fill",
-            "FloodFill+": "Flood Fill+",
-            "IncrementalAStar": "Incremental A*",
-            "IncrementalAStar+": "Incremental A*+",
-        }
-
-        labels = [label_map[k] for k in datasets.keys()]
-
-        values = [
-            metric_mean(runs, metric)
-            for runs in datasets.values()
-        ]
-
-        bars = ax.bar(
-            labels,
-            values,
-            color=[ALGO_COLORS[x] for x in datasets.keys()],
-            alpha=0.9
-        )
-
-        ax.set_title(title, fontweight="bold")
-        ax.grid(axis="y", alpha=0.3)
-
-        for b, v in zip(bars, values):
-
-            if np.isnan(v):
-                continue
-
-            ax.annotate(
-                f"{v:.1f}",
-                xy=(
-                    b.get_x() + b.get_width() / 2,
-                    b.get_height()
-                ),
-                xytext=(0, 2),  # più vicino ma non attaccato
-                textcoords="offset points",
-                ha="center",
-                va="bottom",
-                fontsize=8,
-                color="black"
-            )
-
-    plt.tight_layout()
-
-    plt.savefig(
-        output_dir / "variant_absolute_comparison.png",
-        dpi=150,
-        bbox_inches="tight"
-    )
-
-    plt.close()
-
-    # =====================================================
-    # FIGURA 2
-    # =====================================================
-
-    comparison_metrics = [
-        "total_moves",
-        "visited_cells",
-        "elapsed_seconds",
-    ]
-
-    labels = [
-        "Moves ↓",
-        "Visited Cells ↑",
-        "Elapsed Time ↓",
-    ]
-
-    ff_delta = []
-    astar_delta = []
-
-    for metric in comparison_metrics:
-
-        ff_base = metric_mean(
-            datasets["FloodFill"],
-            metric
-        )
-
-        ff_pen = metric_mean(
-            datasets["FloodFill+"],
-            metric
-        )
-
-        ast_base = metric_mean(
-            datasets["IncrementalAStar"],
-            metric
-        )
-
-        ast_pen = metric_mean(
-            datasets["IncrementalAStar+"],
-            metric
-        )
-
-        if metric == "visited_cells":
-
-            # più = meglio
-
-            ff_change = (
-                100 * (ff_pen - ff_base) / ff_base
-            )
-
-            ast_change = (
-                100 * (ast_pen - ast_base) / ast_base
-            )
-
-        else:
-
-            # meno = meglio
-
-            ff_change = (
-                100 * (ff_base - ff_pen) / ff_base
-            )
-
-            ast_change = (
-                100 * (ast_base - ast_pen) / ast_base
-            )
-
-        ff_delta.append(ff_change)
-        astar_delta.append(ast_change)
-
-    fig, ax = plt.subplots(
-        figsize=(10, 6)
-    )
-
-    y = np.arange(len(labels))
-    h = 0.35
-
-    ax.barh(
-        y - h/2,
-        ff_delta,
-        height=h,
-        color="#4A90D9",
-        label="FloodFill"
-    )
-
-    ax.barh(
-        y + h/2,
-        astar_delta,
-        height=h,
-        color="#E87040",
-        label="IncrementalAStar"
-    )
-
-    ax.axvline(
-        0,
-        color="black",
-        linewidth=1
-    )
-
-    ax.set_yticks(y)
-    ax.set_yticklabels(labels)
-
-    ax.set_xlabel(
-        "Penalty Effect (%)"
-    )
-
-    ax.set_title(
-        "Effect of Revisit Penalty",
+        "Effect of Revisit Penalty — Absolute Values + Relative Change",
         fontsize=15,
         fontweight="bold"
     )
 
-    ax.margins(x=0.20)
+    # =========================
+    # BAR PLOT (ASSOLUTO)
+    # =========================
+    for i, algo in enumerate(algos):
+        values = [
+            metric_mean(datasets[algo], m)
+            for m in metrics.keys()
+        ]
 
-    legend_elements = [
-        Line2D(
-            [0], [0],
-            marker='o',
-            color='w',
-            markerfacecolor=ALG_PALETTE['FloodFill'],
-            markeredgecolor='None',
-            markersize=9,
-            label='Flood Fill'
-        ),
-        Line2D(
-            [0], [0],
-            marker='o',
-            color='w',
-            markerfacecolor=ALG_PALETTE['IncrementalAStar'],
-            markeredgecolor='None',
-            markersize=9,
-            label='Incremental A*'
+        bars = ax.bar(
+            x + i * width,
+            values,
+            width=width,
+            label=label_map[algo],
+            color=ALGO_COLORS[algo],
+            alpha=0.9
         )
-    ]
 
-    ax.legend(
-        handles=legend_elements,
-        framealpha=0.9,
-        loc='upper left'
-    )
+        # =========================
+        # ANNOTAZIONE Δ% (solo su penalizzati)
+        # =========================
+        if "+" in algo:
+            base_algo = algo.replace("+", "")
 
-    for vals, ypos in [
-        (ff_delta, y - h/2),
-        (astar_delta, y + h/2),
-    ]:
+            for j, metric in enumerate(metrics.keys()):
 
-        for v, yy in zip(vals, ypos):
+                base = metric_mean(datasets[base_algo], metric)
+                pen = metric_mean(datasets[algo], metric)
 
-            offset = 0.6 if v >= 0 else -0.6
+                if base == 0 or np.isnan(base):
+                    delta = 0
+                else:
+                    if metric == "visited_cells":
+                        delta = 100 * (pen - base) / base
+                    else:
+                        delta = 100 * (base - pen) / base
 
-            ax.text(
-                v + offset,
-                yy,
-                f"{v:+.1f}%",
-                va="center",
-                ha="left" if v >= 0 else "right",
-                fontsize=8
-            )
+                ax.text(
+                    x[j] + i * width,
+                    values[j],
+                    f"{delta:+.1f}%",
+                    ha="center",
+                    va="bottom",
+                    fontsize=8,
+                    rotation=0
+                )
+
+    ax.set_xticks(x + width * 1.5)
+    ax.set_xticklabels([metrics[m] for m in metrics.keys()])
+
+    ax.set_ylabel("Value")
+    ax.grid(axis="y", alpha=0.25)
+
+    ax.legend(framealpha=0.9)
 
     plt.tight_layout()
 
     plt.savefig(
-        output_dir / "variant_effect_percent.png",
+        output_dir / "variant_combined.png",
         dpi=150,
         bbox_inches="tight"
     )
 
     plt.close()
 
-    print(
-        f"[VariantComparison] Saved plots in {output_dir}"
-    )
+    print(f"[OK] Saved combined plot in {output_dir}")
