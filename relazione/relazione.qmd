@@ -9,8 +9,9 @@ format:
     colorlinks: true
     linkcolor: black
     toccolor: black
-    geometry: margin=2.5cm
+    geometry: "margin=2cm"
     fontsize: 11pt
+    linestretch: 1.08
     include-in-header:
       text: |
         \usepackage{graphicx}
@@ -59,7 +60,7 @@ with open(LOGS_DIR / "incrementalastar_results.json") as f:
 
 # Introduzione
 
-Il problema **Micromouse** consiste nel navigare autonomamente un labirinto 16×16 partendo senza alcuna conoscenza della mappa. Il robot scopre i muri incrementalmente tramite sensori di prossimità e deve aggiornare la propria rappresentazione interna in tempo reale, bilanciando esplorazione e sfruttamento delle informazioni acquisite. Il problema rientra nella categoria degli ambienti parzialmente osservabili (POMDP), dove le decisioni devono essere prese sulla base di osservazioni locali incomplete.
+Il problema **Micromouse** consiste nel navigare autonomamente un labirinto 16×16 partendo senza una conoscenza pregressa della mappa. Il robot scopre i muri incrementalmente tramite sensori di prossimità e deve aggiornare la propria rappresentazione interna in tempo reale, bilanciando esplorazione e sfruttamento delle informazioni acquisite. Il problema rientra nella categoria degli ambienti parzialmente osservabili (POMDP), dove le decisioni devono essere prese sulla base di osservazioni locali incomplete.
 
 Questo progetto implementa e confronta due approcci algoritmici distinti: **Flood Fill**, basato sulla propagazione BFS delle distanze, e **Incremental A\***, basato su pianificazione euristica con replanning adattivo ispirato a LPA* e D* Lite.
 
@@ -80,7 +81,7 @@ Ogni run è governato da una **macchina a stati a tre fasi** in `main.py`:
 
 - **Fase 1 — Esplorazione**: il robot naviga da (0,0) al centro (7,7) scoprendo muri in tempo reale. Il percorso non è ottimo: è il primo percorso praticabile in condizioni di incertezza.
 - **Fase 2 — Ritorno**: il goal viene invertito a (0,0). Il robot torna all'origine percorrendo zone diverse, accumulando ulteriore conoscenza del labirinto.
-- **Fase 3 — Speed Run**: con la mappa parzialmente costruita, il sistema calcola il percorso più corto tra le sole celle visitate (`visited_only=True`) ed lo esegue senza sensing.
+- **Fase 3 — Speed Run**: con la mappa parzialmente costruita, il sistema calcola il percorso più corto tra le sole celle visitate (`visited_only=True`) e lo esegue senza sensing.
 
 # Algoritmi di Navigazione
 
@@ -97,7 +98,7 @@ L'Incremental A* pianifica un percorso esplicito minimizzando $f(x,y) = g(x,y) +
 | | Flood Fill | Incremental A* |
 |---|---|---|
 | Approccio | Reattivo (gradiente) | Deliberativo (percorso esplicito) |
-| Reazione a nuovo muro | Ricalcola tutto: $O(W \times H)$ | Ricalcola solo parte: $O(k \log k)$ |
+| Reazione ad nuovo muro | Ricalcola tutto: $O(W \times H)$ | Ricalcola solo parte: $O(k \log k)$ |
 | Celle visitate (media) | 165 | 122 |
 | Mosse totali (media) | 291 | 213 |
 | Affidabilità | 10/11 (91%) | 32/36 (89%) |
@@ -119,22 +120,37 @@ Il simulatore mms aggiorna i colori delle celle in tempo reale, riflettendo il r
 
 **Flood Fill** — il numero in ogni cella è la distanza $d(x,y)$ dal goal:
 
-| Colore | Distanza $d$ |
-|--------|-------------|
-| Verde | $d = 0$ — celle goal |
-| Giallo | $1 \leq d \leq 4$ |
-| Ciano | $5 \leq d \leq 14$ |
-| Blu | $d \geq 15$ |
-| Bianco | $d = \infty$ — cella irraggiungibile |
-
-**Incremental A\*** — il numero in ogni cella è il valore $f = g + h$:
-
-| Colore | Significato |
-|--------|-------------|
-| Verde | Celle goal |
-| Ciano | Celle già visitate fisicamente |
-| Giallo | Frontiera di ricerca |
-| Nero | $f = \infty$ — non ancora raggiunte |
+\begin{table}[h]
+\begin{minipage}{0.48\textwidth}
+\centering
+\begin{tabular}{ll}
+\hline
+Colore & Distanza $d$ \\
+\hline
+Verde & $d = 0$ — celle goal \\
+Giallo & $1 \leq d \leq 4$ \\
+Ciano & $5 \leq d \leq 14$ \\
+Blu & $d \geq 15$ \\
+Rosso & $d = \infty$ — irraggiungibile \\
+\hline
+\end{tabular}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+\centering
+\textbf{Incremental A*} — valore $f = g + h$:
+\begin{tabular}{ll}
+\hline
+Colore & Significato \\
+\hline
+Verde & Celle goal \\
+Ciano & Celle già visitate \\
+Giallo & Frontiera di ricerca \\
+Nero & $f = \infty$ — non raggiunte \\
+\hline
+\end{tabular}
+\end{minipage}
+\end{table}
 
 # Risultati Sperimentali {#sec-risultati}
 
@@ -145,6 +161,7 @@ Il benchmark è stato condotto su 40 run totali (20 per algoritmo) distribuiti s
 ```{python}
 #| label: fig-bars
 #| fig-cap: "Confronto tra Flood Fill e Incremental A* sui principali indicatori di performance."
+#| fig-pos: "H"
 
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
@@ -165,6 +182,7 @@ La @fig-bars mostra il confronto aggregato sui sei indicatori principali. I risu
 ```{python}
 #| label: fig-typology
 #| fig-cap: "Heatmap della sensibilità degli algoritmi alle diverse tipologie di labirinto: tempo medio (sinistra) e celle visitate (destra)."
+#| fig-pos: "H"
 
 img = mpimg.imread(str(Path("../my_results/typology_sensitivity.png")))
 plt.figure(figsize=(11, 5))
@@ -199,7 +217,7 @@ La @fig-phase2 analizza l'efficacia della fase di ritorno. Il grafico di sinistr
 #| fig-cap: "Exploration ROI: correlazione tra copertura del labirinto e tempo della speed run."
 
 img = mpimg.imread(str(Path("../my_results/exploration_roi.png")))
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(8, 4))
 plt.imshow(img)
 plt.axis("off")
 plt.tight_layout()
@@ -273,13 +291,11 @@ La revisit penalty risulta vantaggiosa solo per il Flood Fill, mentre per l'A\* 
 
 Il progetto ha implementato e confrontato con successo due algoritmi di navigazione autonoma per il problema Micromouse in ambiente parzialmente osservabile. Entrambi gli algoritmi raggiungono il goal nel 100% dei run su tutte le tipologie di labirinto testate, dimostrando robustezza e completezza algoritmiche.
 
-La principale conclusione è che **non esiste un algoritmo universalmente superiore**. Il Flood Fill, nella sua semplicità reattiva, si dimostra sorprendentemente competitivo rispetto all'A\* più sofisticato, e lo supera su labirinti con percorsi multipli. L'Incremental A\* mostra vantaggi su labirinti strutturati (competition) e con vicoli ciechi, dove il replanning locale evita ricalcoli globali inutili. In entrambi i casi, la qualità del percorso finale (speed run) è praticamente identica, indicando che le differenze riguardano principalmente l'efficienza della fase esplorativa e non la qualità della soluzione trovata.
-
-L'analisi della revisit penalty mostra come modifiche algoritmiche apparentemente semplici abbiano effetti asimmetrici sui due approcci, aprendo la strada a configurazioni ibride ottimizzate per specifiche tipologie di labirinto.
+La principale conclusione è che **non esiste un algoritmo universalmente superiore**. Il Flood Fill si dimostra competitivo rispetto all'A\* e lo supera su labirinti con percorsi multipli, mentre l'Incremental A\* è preferibile su labirinti strutturati e con vicoli ciechi, dove il replanning locale evita ricalcoli globali. In entrambi i casi la qualità del percorso finale è praticamente identica: le differenze riguardano l'efficienza esplorativa, non la soluzione trovata. L'analisi della revisit penalty mostra effetti asimmetrici sui due approcci, aprendo la strada a configurazioni ibride.
 
 Per sviluppi futuri si individuano le seguenti direzioni:
 
-- **Esplorazione attiva**: implementare strategie che massimizzano deliberatamente la copertura prima della speed run, riducendo l'incertezza sul percorso ottimo
-- **Algoritmi ibridi**: combinare il gradiente globale del Flood Fill con l'euristica dell'A\* per ottenere il meglio di entrambi gli approcci
-- **Scalabilità**: estendere il sistema a griglie 32×32 per valutare come scalano le complessità computazionali, dove il vantaggio del replanning incrementale dell'A\* dovrebbe essere più marcato
-- **Hardware reale**: portare il sistema su un robot Micromouse fisico, aggiungendo la gestione dell'odometria e dell'incertezza dei sensori reali
+- **Esplorazione attiva**: massimizzare la copertura prima della speed run per ridurre l'incertezza sul percorso ottimo
+- **Algoritmi ibridi**: combinare il gradiente globale del Flood Fill con l'euristica dell'A\* per ottenere il meglio di entrambi
+- **Scalabilità**: estendere il sistema a griglie 32×32, dove il vantaggio del replanning incrementale dell'A\* dovrebbe essere più marcato
+- **Hardware reale**: portare il sistema su un robot fisico, aggiungendo gestione dell'odometria e incertezza sensoriale
