@@ -101,7 +101,6 @@ L'Incremental A* pianifica un percorso esplicito minimizzando $f(x,y) = g(x,y) +
 | Reazione ad nuovo muro | Ricalcola tutto: $O(W \times H)$ | Ricalcola solo parte: $O(k \log k)$ |
 | Celle visitate (media) | 165 | 122 |
 | Mosse totali (media) | 291 | 213 |
-| Affidabilità | 10/11 (91%) | 32/36 (89%) |
 | Caso d'uso ideale | Vicoli ciechi, gare | Labirinti aperti |
 
 ## Visualizzazione nel Simulatore
@@ -112,41 +111,46 @@ Il simulatore mms aggiorna i colori delle celle in tempo reale, riflettendo il r
 
 | Fase | Colore | Significato |
 |------|--------|-------------|
-| Avvio | Giallo | Cella di partenza (0,0) — "S" |
 | Avvio | Verde | Celle goal al centro — "G" |
+| Avvio | Giallo | Cella di partenza (0,0) — "S" |
 | Pre-Fase 3 | Ciano | Celle visitate nelle Fasi 1 e 2 |
 | Pre-Fase 3 | Nero | Celle inesplorate — "?" |
 | Fase 3 | Verde brillante | Percorso ottimo con numero del passo |
 
-**Flood Fill** — il numero in ogni cella è la distanza $d(x,y)$ dal goal:
-
 \begin{table}[h]
 \begin{minipage}{0.48\textwidth}
 \centering
+\textbf{Flood Fill} --- distanza $d(x,y)$ dal goal:
+
+\vspace{0.3em}
+
 \begin{tabular}{ll}
 \hline
 Colore & Distanza $d$ \\
 \hline
-Verde & $d = 0$ — celle goal \\
+Verde & $d = 0$ --- celle goal \\
 Giallo & $1 \leq d \leq 4$ \\
 Ciano & $5 \leq d \leq 14$ \\
 Blu & $d \geq 15$ \\
-Rosso & $d = \infty$ — irraggiungibile \\
+Rosso & $d = \infty$ --- irraggiungibile \\
 \hline
 \end{tabular}
 \end{minipage}
 \hfill
 \begin{minipage}{0.48\textwidth}
 \centering
-\textbf{Incremental A*} — valore $f = g + h$:
+\textbf{Incremental A*} --- valore $f = g + h$:
+
+\vspace{0.3em}
+
 \begin{tabular}{ll}
 \hline
 Colore & Significato \\
 \hline
 Verde & Celle goal \\
-Ciano & Celle già visitate \\
 Giallo & Frontiera di ricerca \\
-Nero & $f = \infty$ — non raggiunte \\
+Ciano & Celle già visitate \\
+Nero & $ = \infty$ --- non raggiunte \\
 \hline
 \end{tabular}
 \end{minipage}
@@ -229,13 +233,14 @@ La @fig-roi affronta una domanda fondamentale: esplorare più celle garantisce u
 # Discussione {#sec-discussione}
 
 ## Effetto della Revisit Penalty
+In questa sezione analizziamo l'impatto della revisit penalty.
 
 ```{python}
 #| label: fig-variant-abs
 #| fig-cap: "Effetto assoluto della revisit penalty sulle quattro varianti algoritmiche."
 
 img = mpimg.imread(str(Path("../logs/variant_plots/variant_absolute_comparison.png")))
-plt.figure(figsize=(10, 6))
+plt.figure(figsize=(8, 4))
 plt.imshow(img)
 plt.axis("off")
 plt.tight_layout()
@@ -247,7 +252,7 @@ plt.show()
 #| fig-cap: "Effetto percentuale della revisit penalty rispetto alla configurazione base."
 
 img = mpimg.imread(str(Path("../logs/variant_plots/variant_effect_percent.png")))
-plt.figure(figsize=(9, 5))
+plt.figure(figsize=(8, 4))
 plt.imshow(img)
 plt.axis("off")
 plt.tight_layout()
