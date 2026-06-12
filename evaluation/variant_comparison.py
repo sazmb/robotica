@@ -1,7 +1,8 @@
 from pathlib import Path
+import json
+
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
 
 from evaluation.metrics import RunMetrics
 
@@ -15,19 +16,31 @@ ALGO_COLORS = {
 
 
 def load_runs(path):
-    import json
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
+
     return [RunMetrics.from_dict(d) for d in data]
 
 
-def metric_mean(runs, metric):
-    values = [
-        getattr(r, metric)
-        for r in runs
-        if hasattr(r, metric) and getattr(r, metric) is not None
-    ]
-    return float(np.mean(values)) if values else np.nan
+def phase_metric_mean(runs, phase_name, metric_name):
+    values = []
+
+    for r in runs:
+
+        phase = getattr(r, phase_name, None)
+
+        if phase is None:
+            continue
+
+        value = getattr(phase, metric_name, None)
+
+        if value is not None:
+            values.append(value)
+
+    if not values:
+        return np.nan
+
+    return float(np.mean(values))
 
 
 def plot_variant_comparison(
@@ -48,12 +61,6 @@ def plot_variant_comparison(
         "IncrementalAStar+": load_runs(astar_penalized),
     }
 
-    metrics = {
-        "total_moves": "Moves",
-        "visited_cells": "Visited Cells",
-        "elapsed_seconds": "Time (s)",
-    }
-
     label_map = {
         "FloodFill": "Flood Fill",
         "FloodFill+": "Flood Fill+",
@@ -61,26 +68,43 @@ def plot_variant_comparison(
         "IncrementalAStar+": "Incremental A*+",
     }
 
+    phase_metrics = {
+        "Phase 1": ("phase1", "moves"),
+        "Phase 2": ("phase2", "moves"),
+        "Phase 3": ("phase3", "moves"),
+    }
+
+    phase_labels = list(phase_metrics.keys())
     algos = list(datasets.keys())
-    x = np.arange(len(metrics))
+
+    x = np.arange(len(phase_labels))
     width = 0.18
 
-    fig, ax = plt.subplots(figsize=(11, 5))
+    fig, ax = plt.subplots(
+        figsize=(11, 5.5)
+    )
 
     fig.suptitle(
-        "Effect of Revisit Penalty — Absolute Values + Relative Change",
+        "Moves Across Phases",
         fontsize=15,
         fontweight="bold"
     )
 
-    # =========================
-    # BAR PLOT (ASSOLUTO)
-    # =========================
     for i, algo in enumerate(algos):
-        values = [
-            metric_mean(datasets[algo], m)
-            for m in metrics.keys()
-        ]
+
+        values = []
+
+        for phase_label in phase_labels:
+
+            phase_name, metric_name = phase_metrics[phase_label]
+
+            values.append(
+                phase_metric_mean(
+                    datasets[algo],
+                    phase_name,
+                    metric_name
+                )
+            )
 
         bars = ax.bar(
             x + i * width,
@@ -91,51 +115,106 @@ def plot_variant_comparison(
             alpha=0.9
         )
 
-        # =========================
-        # ANNOTAZIONE Δ% (solo su penalizzati)
-        # =========================
+        # valori assoluti sopra ogni barra
+        for b, v in zip(bars, values):
+
+            if np.isnan(v):
+                continue
+
+            ax.annotate(
+                f"{v:.1f}",
+                xy=(
+                    b.get_x() + b.get_width() / 2,
+                    b.get_height()
+                ),
+                xytext=(0, 2),
+                textcoords="offset points",
+                ha="center",
+                va="bottom",
+                fontsize=8
+            )
+
+        # delta % per le versioni penalizzate
         if "+" in algo:
+
             base_algo = algo.replace("+", "")
 
-            for j, metric in enumerate(metrics.keys()):
+            for j, phase_label in enumerate(phase_labels):
 
-                base = metric_mean(datasets[base_algo], metric)
-                pen = metric_mean(datasets[algo], metric)
+                phase_name, metric_name = phase_metrics[phase_label]
 
-                if base == 0 or np.isnan(base):
-                    delta = 0
-                else:
-                    if metric == "visited_cells":
-                        delta = 100 * (pen - base) / base
-                    else:
-                        delta = 100 * (base - pen) / base
+                base = phase_metric_mean(
+                    datasets[base_algo],
+                    phase_name,
+                    metric_name
+                )
 
-                ax.text(
-                    x[j] + i * width,
-                    values[j],
+                pen = phase_metric_mean(
+                    datasets[algo],
+                    phase_name,
+                    metric_name
+                )
+
+                if (
+                    np.isnan(base)
+                    or np.isnan(pen)
+                    or base == 0
+                ):
+                    continue
+
+                delta = 100 * (pen - base) / base
+
+                ax.annotate(
                     f"{delta:+.1f}%",
+                    xy=(
+                        x[j] + i * width,
+                        pen
+                    ),
+                    xytext=(0, 16),
+                    textcoords="offset points",
                     ha="center",
                     va="bottom",
                     fontsize=8,
-                    rotation=0
+                    fontweight="bold"
                 )
 
-    ax.set_xticks(x + width * 1.5)
-    ax.set_xticklabels([metrics[m] for m in metrics.keys()])
+    ax.set_xticks(
+        x + width * 1.5
+    )
 
-    ax.set_ylabel("Value")
-    ax.grid(axis="y", alpha=0.25)
+    ax.set_xticklabels(
+        phase_labels
+    )
 
-    ax.legend(framealpha=0.9)
+    ax.set_ylabel(
+        "Moves"
+    )
+
+    ax.set_xlabel(
+        "Phase"
+    )
+
+    ax.grid(
+        axis="y",
+        alpha=0.25
+    )
+
+    ax.legend(
+        framealpha=0.9
+    )
+
+    ax.margins(y=0.1)
 
     plt.tight_layout()
 
     plt.savefig(
-        output_dir / "variant_combined.png",
+        output_dir / "variant_moves.png",
         dpi=150,
         bbox_inches="tight"
     )
 
     plt.close()
 
-    print(f"[OK] Saved combined plot in {output_dir}")
+    print(
+        f"[OK] Saved plot in {output_dir}"
+    )

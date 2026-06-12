@@ -85,7 +85,7 @@ class MazePlotter:
     def __init__(
         self,
         collector: MetricsCollector,
-        output_dir: str | Path = "logs_v2/plots",
+        output_dir: str | Path = "logs/plots",
         dpi: int = 150,
     ) -> None:
         """
@@ -178,7 +178,7 @@ class MazePlotter:
 
             ax.set_title(metric.replace("_", " ").title(), fontsize=11, pad=10, fontweight="bold")
             ax.set_xticks(x)
-            ax.set_xticklabels(labels, rotation=15, ha="right", fontsize=9)
+            ax.set_xticklabels(['Flood Fill', 'Incremental A*'])
             ax.set_ylabel("Value", fontsize=10)
             ax.grid(axis="y", alpha=0.4)
             ax.set_axisbelow(True)
@@ -604,25 +604,25 @@ class MazePlotter:
         paths: list[Path] = []
         paths.append(self.plot_comparison_bars())
 
-        # Typology comparison — only generate when multiple typologies present
-        all_typologies = sorted(
-            {r.maze_typology for r in self.collector.runs_for()}
-        )
-        if len(all_typologies) > 1 or (
-            len(all_typologies) == 1 and all_typologies[0] != "unknown"
-        ):
-            paths.append(self.plot_typology_comparison())
+        # # Typology comparison — only generate when multiple typologies present
+        # all_typologies = sorted(
+        #     {r.maze_typology for r in self.collector.runs_for()}
+        # )
+        # if len(all_typologies) > 1 or (
+        #     len(all_typologies) == 1 and all_typologies[0] != "unknown"
+        # ):
+        #     paths.append(self.plot_typology_comparison())
 
-        if visit_counts_by_algo:
-            for algo, counts in visit_counts_by_algo.items():
-                safe_name = algo.lower().replace(" ", "_")
-                paths.append(
-                    self.plot_exploration_heatmap(
-                        visit_counts=counts,
-                        title=f"Exploration Heatmap — {algo}",
-                        filename=f"heatmap_{safe_name}.png",
-                    )
-                )
+        # if visit_counts_by_algo:
+        #     for algo, counts in visit_counts_by_algo.items():
+        #         safe_name = algo.lower().replace(" ", "_")
+        #         paths.append(
+        #             self.plot_exploration_heatmap(
+        #                 visit_counts=counts,
+        #                 title=f"Exploration Heatmap — {algo}",
+        #                 filename=f"heatmap_{safe_name}.png",
+        #             )
+        #         )
 
         print(f"\n[Plotter] Generated {len(paths)} plots in {self.output_dir}")
         return paths

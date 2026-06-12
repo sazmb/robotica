@@ -102,53 +102,46 @@ L'Incremental A* pianifica un percorso esplicito minimizzando $f(x,y) = g(x,y) +
 
 Il simulatore mms aggiorna i colori delle celle in tempo reale, riflettendo il ragionamento interno dell'algoritmo ad ogni passo.
 
-**Comuni a entrambi gli algoritmi:**
-
-| Fase | Colore | Significato |
-|------|--------|-------------|
-| Avvio | Verde | Celle goal al centro — "G" |
-| Avvio | Giallo | Cella di partenza (0,0) — "S" |
-| Pre-Fase 3 | Ciano | Celle visitate nelle Fasi 1 e 2 |
-| Pre-Fase 3 | Nero | Celle inesplorate — "?" |
-| Fase 3 | Verde brillante | Percorso ottimo con numero del passo |
-
 \begin{table}[h]
-\begin{minipage}{0.48\textwidth}
 \centering
-\textbf{Flood Fill} --- distanza $d(x,y)$ dal goal:
-
-\vspace{0.3em}
-
-\begin{tabular}{ll}
+\small
+\caption{Legenda dei colori utilizzati durante la simulazione.}
+\begin{tabular}{p{2.5cm} p{6cm} p{6cm}}
 \hline
-Colore & Distanza $d$ \\
+\textbf{Algoritmo} & \textbf{Fasi 1--2 (esplorazione)} & \textbf{Fase 3 (speed run)} \\
 \hline
-Verde & $d = 0$ --- celle goal \\
-Giallo & $1 \leq d \leq 4$ \\
-Ciano & $5 \leq d \leq 14$ \\
-Blu & $d \geq 15$ \\
-Rosso & $d = \infty$ --- irraggiungibile \\
+
+Flood Fill &
+\begin{tabular}[t]{@{}ll@{}}
+Verde & goal ($d=0$) \\
+Giallo & $1 \le d \le 4$ \\
+Ciano & $5 \le d \le 14$ \\
+Blu & $d \ge 15$ \\
+Rosso & $d=\infty$ (irraggiungibile)
+\end{tabular}
+&
+\begin{tabular}[t]{@{}ll@{}}
+Ciano & celle visitate \\
+Verde & percorso ottimale
+\end{tabular}
+\\[1em]
+
+Incremental A* &
+\begin{tabular}[t]{@{}ll@{}}
+Verde & goal \\
+Giallo & frontiera di ricerca ($f$ visibile) \\
+Ciano & celle esplorate \\
+Nero & celle inesplorate
+\end{tabular}
+&
+\begin{tabular}[t]{@{}ll@{}}
+Ciano & celle visitate nelle fasi 1--2 \\
+Verde & percorso ottimale
+\end{tabular}
+\\
+
 \hline
 \end{tabular}
-\end{minipage}
-\hfill
-\begin{minipage}{0.48\textwidth}
-\centering
-\textbf{Incremental A*} --- valore $f = g + h$:
-
-\vspace{0.3em}
-
-\begin{tabular}{ll}
-\hline
-Colore & Significato \\
-\hline
-Verde & Celle goal \\
-Giallo & Frontiera di ricerca \\
-Ciano & Celle già visitate \\
-Nero & $ = \infty$ --- non raggiunte \\
-\hline
-\end{tabular}
-\end{minipage}
 \end{table}
 
 # Risultati Sperimentali {#sec-risultati}
@@ -219,7 +212,7 @@ La @fig-phase2 analizza l'efficacia della fase di ritorno. Il grafico di sinistr
 #| fig-cap: "Exploration ROI: correlazione tra copertura del labirinto e tempo della speed run."
 
 img = mpimg.imread(str(Path("../my_results/exploration_roi.png")))
-plt.figure(figsize=(8, 3))
+plt.figure(figsize=(9, 5))
 plt.imshow(img)
 plt.axis("off")
 plt.tight_layout()
@@ -231,23 +224,22 @@ La @fig-roi affronta una domanda fondamentale: esplorare più celle garantisce u
 # Discussione {#sec-discussione}
 
 ## Effetto della Revisit Penalty
+
 In questa sezione analizziamo l'impatto della revisit penalty.
 
 ```{python}
 #| label: fig-variant
 #| fig-cap: "Effetto della revisit penalty rispetto alla configurazione base."
 
-img = mpimg.imread(str(Path("../logs/variant_plots/variant_combined.png")))
-plt.figure(figsize=(8, 4))
+img = mpimg.imread(str(Path("../logs/variant_plots/variant_moves.png")))
+plt.figure(figsize=(9, 3))
 plt.imshow(img)
 plt.axis("off")
 plt.tight_layout()
 plt.show()
 ```
 
-La @fig-variant analizza l'impatto della **revisit penalty** — un meccanismo che penalizza le celle già visitate per incentivare l'esplorazione di zone nuove. Le varianti "+" indicano la versione con penalty attiva.
-
-I risultati sono asimmetrici tra i due algoritmi. Per il **Flood Fill**, la penalty riduce le mosse del 9.6% (da 263 a 289) ma aumenta le celle visitate del 9% — il robot evita le celle già visitate ma percorre traiettorie più tortuose verso zone nuove. Il tempo migliora del 3.3%. Per l'**Incremental A\***, l'effetto è molto più contenuto: le mosse si riducono solo dello 0.8% e le celle visitate aumentano del 4%, mentre il tempo peggiora leggermente (+1.7%). Questo suggerisce che l'A\* è già naturalmente portato verso l'esplorazione di nuove celle grazie all'euristica, e la penalty aggiuntiva introduce overhead senza benefici significativi.
+La @fig-variant mostra l'effetto della revisit penalty sul numero medio di mosse nelle tre fasi dell'esplorazione. Le varianti "+" indicano la versione con penalty attiva. L'effetto è nettamente più marcato per il **Flood Fill**, che nella Fase 2 richiede il 29.1% di mosse in più, mentre nelle altre fasi la variazione è trascurabile. Per l'**Incremental A\***, l'impatto rimane contenuto in tutte le fasi (+3.9% nella Fase 2 e -1.4% nella Fase 3). Questo suggerisce che l'euristica dell'A\* riduce già naturalmente i ritorni su celle visitate, mentre il Flood Fill risulta più sensibile all'introduzione di costi aggiuntivi per il revisiting.
 
 ## Smoothness Cinematica
 
