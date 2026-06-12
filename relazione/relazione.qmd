@@ -78,7 +78,7 @@ Il sistema è organizzato in quattro livelli indipendenti:
 | Algoritmi | `flood_fill.py`, `incremental_astar.py` | Logica di navigazione |
 | Valutazione | `metrics.py`, `benchmark.py`, `plotting.py` | Raccolta dati e analisi |
 
-`simulator_api.py` funge da layer **Adapter** tra il protocollo testuale del simulatore e il codice Python, esponendo funzioni di alto livello come `move_forward()` e `wall_front()`. `maze.py` rappresenta il labirinto tramite bitmask a 4 bit per cella (Nord/Sud/Est/Ovest), aggiornata incrementalmente ad ogni nuova osservazione. `robot.py` traccia posizione, orientamento e storia delle celle visitate.
+`simulator_api.py` funge da layer **Adapter** tra il protocollo testuale del simulatore e il codice Python, esponendo funzioni di alto livello come `move_forward()` e `wall_front()`. `maze.py` rappresenta il labirinto tramite bitmask a 4 bit per cella per indicare le posizioni dei muri (Nord/Sud/Est/Ovest), aggiornata incrementalmente ad ogni nuova osservazione. `robot.py` traccia posizione, orientamento e storia delle celle visitate.
 
 Ogni run è governato da una **macchina a stati a tre fasi** in `main.py`:
 
@@ -96,15 +96,7 @@ Il Flood Fill assegna a ogni cella $(x,y)$ una distanza $d(x,y)$ dal goal tramit
 
 L'Incremental A* pianifica un percorso esplicito minimizzando $f(x,y) = g(x,y) + h(x,y)$, dove $g$ è il costo percorso finora e $h$ è la distanza di Manhattan al goal. L'euristica è **ammissibile** (non sovrastima mai) e **consistente** (monotona), garantendo ottimalità con peso $w=1$. La componente incrementale consente di validare il percorso corrente ad ogni nuovo muro e ricalcolare solo la porzione invalidata, invece di ripartire da zero. La ricerca utilizza un min-heap binario con complessità $O(k \log k)$ per replan, dove $k \ll 256$ è la regione invalidata.
 
-## Confronto
 
-| | Flood Fill | Incremental A* |
-|---|---|---|
-| Approccio | Reattivo (gradiente) | Deliberativo (percorso esplicito) |
-| Reazione ad nuovo muro | Ricalcola tutto: $O(W \times H)$ | Ricalcola solo parte: $O(k \log k)$ |
-| Celle visitate (media) | 165 | 122 |
-| Mosse totali (media) | 291 | 213 |
-| Caso d'uso ideale | Vicoli ciechi, gare | Labirinti aperti |
 
 ## Visualizzazione nel Simulatore
 
@@ -161,7 +153,10 @@ Nero & $ = \infty$ --- non raggiunte \\
 
 # Risultati Sperimentali {#sec-risultati}
 
-Il benchmark è stato condotto su 40 run totali (20 per algoritmo) distribuiti su 5 tipologie di labirinto: competition, dead_end, multiple_path, open_area e symmetric. Entrambi gli algoritmi hanno raggiunto il goal nel 100% dei run, dimostrando robustezza completa su tutte le configurazioni testate.
+La valutazione sperimentale è stata condotta utilizzando un benchmark costituito da cinque differenti tipologie di labirinto: *competition*, *dead_end*, *multiple_path*, *open_area* e *symmetric*. Complessivamente, sono state effettuate 40 esecuzioni, equamente ripartite tra i due algoritmi oggetto di studio (20 run per algoritmo). I risultati ottenuti mostrano che entrambi gli algoritmi hanno raggiunto il goal nel 100% delle esecuzioni effettuate, evidenziando un elevato livello di robustezza e affidabilità rispetto a tutte le configurazioni ambientali considerate.
+
+Gli esperimenti sono stati eseguiti in un ambiente di simulazione basato su Windows 11 e Python 3.11.9, su una piattaforma hardware equipaggiata con processore AMD Ryzen 7 5700X. Per la simulazione è stato utilizzato il simulatore Micromouse MMS sviluppato da Mackorone (https://github.com/mackorone/mms). Durante l'intera campagna sperimentale, la velocità di esecuzione del simulatore è stata impostata al valore massimo disponibile e mantenuta costante in tutte le prove, al fine di garantire uniformità nelle condizioni di valutazione.
+
 
 ## Confronto Generale tra gli Algoritmi
 
@@ -293,5 +288,5 @@ Per sviluppi futuri si individuano le seguenti direzioni:
 
 - **Esplorazione attiva**: massimizzare la copertura prima della speed run per ridurre l'incertezza sul percorso ottimo
 - **Algoritmi ibridi**: combinare il gradiente globale del Flood Fill con l'euristica dell'A\* per ottenere il meglio di entrambi
-- **Scalabilità**: estendere il sistema a griglie 32×32, dove il vantaggio del replanning incrementale dell'A\* dovrebbe essere più marcato
+- **Simulazione più dettagliata**: migliorare il realismo del contesto simulativo introducendo movimenti più fini (ad esempio rotazioni a 45° e spostamenti a mezzo step) oppure estendendo il simulatore tramite API per supportare dinamiche di velocità variabile durante l’esecuzione
 - **Hardware reale**: portare il sistema su un robot fisico, aggiungendo gestione dell'odometria e incertezza sensoriale
