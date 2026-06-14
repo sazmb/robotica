@@ -1,4 +1,4 @@
-# 🐭 Micromouse Maze Solver
+# Micromouse Maze Solver
 
 > A research-grade implementation of two maze-solving algorithms for the [mms Micromouse Simulator](https://github.com/mackorone/mms) by Mackorone.
 
@@ -8,7 +8,7 @@
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 1. [Project Overview](#-project-overview)
 2. [Architecture](#-architecture)
@@ -23,7 +23,7 @@
 
 ---
 
-## 🎯 Project Overview
+## Project Overview
 
 This project implements a complete **Micromouse maze-solving system** consisting of:
 
@@ -49,7 +49,7 @@ The robot operates in a **partially observable** 16×16 maze: it starts with no 
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────┐
@@ -88,7 +88,7 @@ The robot operates in a **partially observable** 16×16 maze: it starts with no 
 
 ---
 
-## 💻 Installation
+## Installation
 
 ### Prerequisites
 
@@ -117,7 +117,7 @@ pip install -r requirements.txt
 
 ---
 
-## 🖥️ Simulator Setup
+## Simulator Setup
 
 ### Download mms
 
@@ -143,7 +143,7 @@ pip install -r requirements.txt
 
 ---
 
-## 🚀 Running the Algorithms
+## Running the Algorithms
 
 ### Flood Fill
 
@@ -175,7 +175,7 @@ python main.py --algorithm astar --weight 1.5
 | `--no-save` | — | off | Disable metrics persistence |
 | `--weight` | — | `1.0` | A* heuristic weight (≥1.0) |
 
-## 📊 Running Benchmarks
+## Running Benchmarks
 
 ### Collecting Data
 
@@ -227,7 +227,7 @@ Plots are saved as high-resolution PNG files in `logs/plots/`.
 
 ---
 
-## 📈 Metrics Explained
+## Metrics Explained
 
 | Metric | Description | Units |
 |--------|-------------|-------|
@@ -244,7 +244,7 @@ Plots are saved as high-resolution PNG files in `logs/plots/`.
 
 ---
 
-## 🔬 Experimental Analysis
+## Experimental Analysis
 
 ### Flood Fill
 
@@ -308,7 +308,7 @@ Where:
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 robotica_proposta_1/
@@ -348,7 +348,7 @@ robotica_proposta_1/
 
 ---
 
-## 🔮 Future Improvements
+## Future Improvements
 
 ### Algorithmic
 - [ ] **D* Lite**: Full incremental replanning with reverse search
@@ -371,13 +371,13 @@ robotica_proposta_1/
 
 ---
 
-## 📄 License
+## License
 
 MIT License — See [LICENSE](LICENSE) for details.
 
 ---
 
-## 🙏 Acknowledgements
+## Acknowledgements
 
 - [mackorone/mms](https://github.com/mackorone/mms) — Excellent open-source Micromouse simulator
 - Micromouse Wikipedia — Background on the competition
