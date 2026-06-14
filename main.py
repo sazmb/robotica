@@ -1,10 +1,7 @@
 """
 Micromouse Main Entry Point — 3-Phase State Machine
-=====================================================
-This is the script that the mms simulator invokes via stdin/stdout.
-
 Execution Lifecycle (per run)
-------------------------------
+
   Phase 1 — Exploration
       Robot starts at (0,0) and navigates to the goal centre (7,7).
       Full wall sensing and replanning occur.
@@ -29,9 +26,6 @@ Usage (from mms simulator):
   Command: python main.py
   OR:      python main.py --algorithm flood_fill
   OR:      python main.py --algorithm astar
-
-Author: Micromouse Research Project
-Python: 3.11+
 """
 
 from __future__ import annotations

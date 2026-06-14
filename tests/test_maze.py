@@ -1,10 +1,7 @@
 """
 Unit Tests — MazeMap
-=====================
 Tests for the core maze representation module.
-
-Run with:
-    pytest tests/ -v
+Run with pytest tests/ -v
 """
 
 from __future__ import annotations

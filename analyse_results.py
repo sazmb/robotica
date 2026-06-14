@@ -1,17 +1,10 @@
 """
 Offline Analysis Script
-========================
-Run this script AFTER collecting benchmark data from the simulator.
-
 It loads the JSON result files saved by main.py, runs statistical
 analysis, generates plots, and saves a Markdown report.
-
 Usage:
     python analyse_results.py
     python analyse_results.py --output-dir my_results
-
-Author: Micromouse Research Project
-Python: 3.11+
 """
 
 from __future__ import annotations

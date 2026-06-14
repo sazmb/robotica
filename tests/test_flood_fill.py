@@ -1,11 +1,7 @@
 """
 Unit Tests — Flood Fill Algorithm
-===================================
 Tests for the Flood Fill distance propagation logic.
-Simulator I/O is not tested here (requires mms to be running).
-
-Run with:
-    pytest tests/ -v
+Run with pytest tests/ -v
 """
 
 from __future__ import annotations

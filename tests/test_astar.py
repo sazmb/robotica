@@ -1,11 +1,7 @@
 """
 Unit Tests — Incremental A* Algorithm
-=======================================
 Tests for the A* planning logic in isolation.
-Simulator I/O is patched out.
-
-Run with:
-    pytest tests/ -v
+Run with pytest tests/ -v
 """
 
 from __future__ import annotations

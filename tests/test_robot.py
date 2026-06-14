@@ -1,14 +1,10 @@
 """
 Unit Tests — RobotState
-========================
 Tests for the robot state representation module.
-
 Note: Tests that involve simulator I/O (move_forward, turn_right, etc.)
 are integration tests and require the mms simulator to be running.
 Only pure-logic unit tests are included here.
-
-Run with:
-    pytest tests/ -v
+Run with pytest tests/ -v
 """
 
 from __future__ import annotations

@@ -1,10 +1,8 @@
 """
 pytest configuration file.
-
 This file ensures the project root is on sys.path so that
 `import core`, `import algorithms`, etc. work correctly
 when running tests from any directory.
-
 Usage:
     pytest                   # Run all tests
     pytest tests/ -v         # Verbose output
